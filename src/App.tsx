@@ -190,7 +190,13 @@ export default function BadmintonTrainingApp() {
   const [timerStartValue, setTimerStartValue] = useState(45);
   const [timerRunning, setTimerRunning] = useState(false);
   const [timerLocked, setTimerLocked] = useState(true);
-  const [logs, setLogs] = useState(INITIAL_LOGS);
+  const [logs, setLogs] = useState(() => {
+  const saved = localStorage.getItem("badminton_logs");
+  return saved ? JSON.parse(saved) : INITIAL_LOGS;
+});
+  useEffect(() => {
+  localStorage.setItem("badminton_logs", JSON.stringify(logs));
+}, [logs]);
   const [flowIndex, setFlowIndex] = useState(0);
   const [flowRunning, setFlowRunning] = useState(false);
 
