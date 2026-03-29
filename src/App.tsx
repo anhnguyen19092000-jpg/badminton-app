@@ -252,7 +252,26 @@ export default function BadmintonTrainingApp() {
   const openTimer = (label, seconds, locked = true) => { setTimerLabel(label); setSecondsLeft(seconds); setTimerStartValue(seconds); setTimerRunning(false); setTimerLocked(locked); setTimerOpen(true); };
   const resetFlow = () => { setFlowIndex(0); setFlowRunning(false); if (sessionFlow[0]) { setSecondsLeft(sessionFlow[0].seconds); setTimerStartValue(sessionFlow[0].seconds); } };
   const startFlowStep = (index = flowIndex) => { const step = sessionFlow[index]; if (!step) return; setFlowIndex(index); setSecondsLeft(step.seconds); setTimerStartValue(step.seconds); setFlowRunning(true); };
-  const nextFlowStep = () => { const nextIndex = clamp(flowIndex + 1, 0, Math.max(sessionFlow.length - 1, 0)); setFlowIndex(nextIndex); const step = sessionFlow[nextIndex]; if (step) { setSecondsLeft(step.seconds); setTimerStartValue(step.seconds); } setFlowRunning(false); };
+const nextFlowStep = () => {
+  const isLastStep = flowIndex >= sessionFlow.length - 1;
+
+  if (isLastStep) {
+    setFlowRunning(false);
+    completeSession();
+    return;
+  }
+
+  const nextIndex = flowIndex + 1;
+  setFlowIndex(nextIndex);
+  const step = sessionFlow[nextIndex];
+
+  if (step) {
+    setSecondsLeft(step.seconds);
+    setTimerStartValue(step.seconds);
+  }
+
+  setFlowRunning(false);
+};
   const toggleItem = (id) => setSelected((prev) => prev.includes(id) ? prev.filter((value) => value !== id) : prev.length >= currentWeek.maxExercises ? prev : [...prev, id]);
   const smartTemplates = {
     "Footwork + Power": ["shadow-6", "smash-combo", "rear-recovery", "split-step-hops", "squats", "plyo-jumps", "planks", "single-leg-calf"],
