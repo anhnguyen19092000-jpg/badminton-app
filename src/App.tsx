@@ -434,7 +434,21 @@ export default function BadmintonTrainingApp() {
                       <div className="text-sm text-slate-200">Current Step</div>
                       <div className="mt-1 text-2xl font-bold text-white">{currentFlowStep ? currentFlowStep.label : "No session steps loaded"}</div>
                       {currentFlowStep && <div className="mt-3 flex flex-wrap gap-2"><Badge className={cx(currentFlowStep.kind === "Rest" ? "border-blue-500/30 bg-blue-500/15 text-blue-100" : "border-slate-600 bg-slate-900 text-slate-50")}>{currentFlowStep.kind}</Badge><Badge className="border-slate-600 bg-slate-900 text-slate-50">{currentFlowStep.kind === "Work Block" ? currentFlowStep.prescription : formatTime(currentFlowStep.seconds)}</Badge></div>}
-                      <div className="mt-4 rounded-3xl border border-slate-700 bg-slate-950 p-6 text-center text-6xl font-bold text-white">{formatTime(secondsLeft)}</div>
+                      <div className="mt-4 rounded-3xl border border-slate-700 bg-slate-950 p-6 text-center">
+  {currentFlowStep?.kind === "Work Block" ? (
+    <div className="space-y-4">
+      <div className="text-3xl font-bold text-white">{currentFlowStep.prescription}</div>
+      <Button onClick={() => {
+  setFlowRunning(false);
+  nextFlowStep();
+}}>
+  Complete Set
+</Button>
+    </div>
+  ) : (
+    <div className="text-6xl font-bold text-white">{formatTime(secondsLeft)}</div>
+  )}
+</div>
                     </motion.div>
                   </AnimatePresence>
                   <div className="rounded-3xl border border-slate-700 bg-slate-800/60 p-4"><div className="text-sm text-slate-200">Up Next</div><div className="mt-1 text-lg font-semibold text-white">{nextFlowStepData ? nextFlowStepData.label : "Session complete"}</div><div className="mt-1 text-sm text-slate-300">{nextFlowStepData ? nextFlowStepData.kind : "Nice. You cooked."}</div></div>
