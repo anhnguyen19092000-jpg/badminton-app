@@ -279,15 +279,34 @@ const nextFlowStep = () => {
     "Core & Stability": ["planks", "dead-bug", "hollow-hold", "glute-bridge", "band-shoulders", "band-pullapart"],
   };
  const addSmartSession = () => {
-  const pool = [...(smartTemplates[goal] || smartTemplates["Footwork + Power"])];
-  const currentSet = new Set(selected);
+  const pool = smartTemplates[goal] || smartTemplates["Footwork + Power"];
 
-  const shuffled = pool.sort(() => Math.random() - 0.5);
+  const footwork = pool.filter(d => d.type === "Footwork");
+  const strength = pool.filter(d => d.type === "Strength");
+  const core = pool.filter(d => d.type === "Core");
+  const conditioning = pool.filter(d => d.type === "Conditioning");
 
-  const differentFirst = [
-    ...shuffled.filter((id) => !currentSet.has(id)),
-    ...shuffled.filter((id) => currentSet.has(id)),
+  const pickRandom = (arr, count) =>
+    arr.sort(() => Math.random() - 0.5).slice(0, count);
+
+  let selectedItems = [
+    ...pickRandom(footwork, 2),
+    ...pickRandom(strength, 2),
+    ...pickRandom(core, 1),
+    ...pickRandom(conditioning, 1),
   ];
+
+  // fill remaining slots
+  while (selectedItems.length < currentWeek.maxExercises) {
+    const remaining = pool.filter(d => !selectedItems.includes(d));
+    if (remaining.length === 0) break;
+    selectedItems.push(remaining[Math.floor(Math.random() * remaining.length)]);
+  }
+
+  setSelected(selectedItems.map(d => d.id));
+  setFlowIndex(0);
+  setFlowRunning(false);
+};
 
   const nextSelection = differentFirst.slice(0, currentWeek.maxExercises);
 
