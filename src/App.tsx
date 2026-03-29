@@ -356,24 +356,6 @@ const addSmartSession = () => {
   setFlowRunning(false);
 };
 
-  // fill remaining slots
-  while (selectedItems.length < currentWeek.maxExercises) {
-    const remaining = pool.filter(d => !selectedItems.includes(d));
-    if (remaining.length === 0) break;
-    selectedItems.push(remaining[Math.floor(Math.random() * remaining.length)]);
-  }
-
-  setSelected(selectedItems.map(d => d.id));
-  setFlowIndex(0);
-  setFlowRunning(false);
-};
-
-  const nextSelection = differentFirst.slice(0, currentWeek.maxExercises);
-
-  setSelected(nextSelection);
-  setFlowIndex(0);
-  setFlowRunning(false);
-};
   const completeSession = () => { const minutes = Math.max(currentWeek.duration, Math.round(totalEstimatedSeconds / 60)); const baseXP = selected.length * 18 + currentWeek.week * 14 + currentWeek.workSetsBonus * 10; const bonus = selected.length >= currentWeek.maxExercises ? 35 : 15; const earned = baseXP + bonus; const today = new Date().toISOString().slice(0, 10); setLogs((prev) => [{ date: today, session: `${goal} • Week ${week}`, minutes, xp: earned }, ...prev].slice(0, 20)); };
   const removeFromSession = (id) => { setSelected((prev) => prev.filter((value) => value !== id)); resetFlow(); };
   const resetEverything = () => { setWeek(1); setSelected(DEFAULT_SESSION); setGoal("Footwork + Power"); setSearch(""); setLogs(INITIAL_LOGS); setTimerRunning(false); setTimerOpen(false); setSecondsLeft(45); setTimerStartValue(45); setTimerLocked(true); setTimerLabel("Interval Timer"); setFlowIndex(0); setFlowRunning(false); };
