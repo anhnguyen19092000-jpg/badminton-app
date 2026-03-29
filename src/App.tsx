@@ -111,7 +111,7 @@ function getSessionSteps(chosenItems, currentWeek) {
     const totalSets = item.sets + currentWeek.workSetsBonus;
     const scaledTime = Math.round(item.timerSeconds * currentWeek.workTimeScale);
     for (let i = 0; i < totalSets; i += 1) {
-      steps.push({ id: `${item.id}-${i + 1}`, label: `${item.name} · Set ${i + 1}`, seconds: scaledTime, kind: item.mode === "time" ? "Timed Drill" : "Work Block", locked: item.mode === "time", prescription: item.mode === "reps" ? item.reps : formatTime(scaledTime) });
+      steps.push({ id: `${item.id}-${i + 1}`, label: `${item.name} · Set ${i + 1}`, seconds: item.mode === "time" ? scaledTime : 0, kind: item.mode === "time" ? "Timed Drill" : "Work Block", locked: item.mode === "time", prescription: item.mode === "reps" ? item.reps : formatTime(scaledTime) });
       if (i < totalSets - 1) {
         const baseRest = item.mode === "time" ? REST_RULES.timedSetRest : REST_RULES.repSetRest;
         const scaledRest = Math.round(baseRest * currentWeek.restScale);
