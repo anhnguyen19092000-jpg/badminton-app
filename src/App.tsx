@@ -303,8 +303,8 @@ const nextFlowStep = () => {
   const achievements = ACHIEVEMENTS.map((achievement) => ({ ...achievement, unlocked: achievement.check({ logs, weekProgress, week, level }) }));
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-50">
-      <div className="mx-auto max-w-7xl p-5 md:p-8">
+    <div className="min-h-screen bg-slate-950 text-slate-50 max-w-md mx-auto">
+      <div className="p-4">
         <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35 }} className="mb-8 grid gap-5 xl:grid-cols-[1.35fr_0.65fr]">
           <Card className="bg-gradient-to-br from-slate-900 via-slate-900 to-slate-800">
             <CardHeader className="pb-4">
@@ -357,17 +357,18 @@ const nextFlowStep = () => {
           </Card>
         </motion.div>
 
-        <Tabs defaultValue="builder" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-5 rounded-2xl border border-slate-700 bg-slate-900 p-1">
-            <TabsTrigger value="builder">Builder</TabsTrigger>
-            <TabsTrigger value="flow">Guided Flow</TabsTrigger>
-            <TabsTrigger value="plan">Plan</TabsTrigger>
-            <TabsTrigger value="log">Log</TabsTrigger>
-            <TabsTrigger value="progress">Progress</TabsTrigger>
-          </TabsList>
+        <Tabs defaultValue="build" className="space-y-6">
+  <TabsList className="grid w-full grid-cols-6 rounded-2xl border border-slate-700 bg-slate-900 p-1">
+    <TabsTrigger value="build">Build</TabsTrigger>
+    <TabsTrigger value="session">Session</TabsTrigger>
+    <TabsTrigger value="flow">Guided Flow</TabsTrigger>
+    <TabsTrigger value="plan">Plan</TabsTrigger>
+    <TabsTrigger value="log">Log</TabsTrigger>
+    <TabsTrigger value="progress">Progress</TabsTrigger>
+  </TabsList>
 
-          <TabsContent value="builder">
-            <div className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
+          <TabsContent value="build">
+            <div className="grid gap-6">
               <Card>
                 <CardHeader>
                   <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
@@ -429,31 +430,148 @@ const nextFlowStep = () => {
                   </div>
                 </CardContent>
               </Card>
-
-              <div className="space-y-6">
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-2xl text-white">Session Overview</CardTitle>
-                    <CardDescription className="text-slate-200">A cleaner, more professional session view with separate warm-up, work, and cooldown sections.</CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-5">
-                    <div className="rounded-2xl border border-slate-700 bg-slate-800/80 p-4"><div className="mb-2 flex items-center gap-2 text-slate-50"><Shield className="h-4 w-4" /> Session check</div><p className={cx("text-sm leading-relaxed", safetyMessage.includes("good") ? "text-emerald-300" : "text-amber-300")}>{safetyMessage}</p></div>
-                    <SectionCard icon={<Zap className="h-4 w-4" />} title="Warm-Up" subtitle="Preparation sequence">{WARMUP_STEPS.map((step) => <TimerRow key={step.id} label={step.label} timeLabel={formatTime(step.seconds)} onStart={() => openTimer(step.label, step.seconds, true)} />)}</SectionCard>
-                    <SectionCard icon={<Target className="h-4 w-4" />} title="Main Work" subtitle={`Selected exercises: ${selected.length} / ${currentWeek.maxExercises}`} right={<Badge className="border-emerald-500/30 bg-emerald-500/15 text-emerald-100">{Math.round(chosenItems.reduce((sum, item) => sum + Math.round(item.timerSeconds * currentWeek.workTimeScale) * (item.sets + currentWeek.workSetsBonus), 0) / 60)} min</Badge>}>
-                      <div className="space-y-2">
-                        {chosenItems.map((item) => {
-                          const scaledTime = Math.round(item.timerSeconds * currentWeek.workTimeScale);
-                          return <div key={item.id} className="flex items-center justify-between gap-3 rounded-2xl border border-slate-700 bg-slate-800/80 px-4 py-3"><div><div className="font-medium text-white">{item.name}</div><div className="text-sm text-slate-200">{displayPrescription(item, currentWeek)}</div></div><div className="flex items-center gap-2">{item.mode === "time" ? <Button size="sm" variant="secondary" className="rounded-xl" onClick={() => openTimer(item.name, scaledTime, true)}><Timer className="h-4 w-4" /> {formatTime(scaledTime)}</Button> : <Badge className="border-slate-600 bg-slate-900 text-slate-50">Reps</Badge>}<Button variant="ghost" size="icon" className="rounded-xl" onClick={() => removeFromSession(item.id)}><Trash2 className="h-4 w-4" /></Button></div></div>;
-                        })}
-                      </div>
-                    </SectionCard>
-                    <SectionCard icon={<Wind className="h-4 w-4" />} title="Cooldown" subtitle="Recovery sequence">{COOLDOWN_STEPS.map((step) => <TimerRow key={step.id} label={step.label} timeLabel={formatTime(step.seconds)} onStart={() => openTimer(step.label, step.seconds, true)} />)}</SectionCard>
-                    <div className="grid grid-cols-2 gap-3"><Button variant="secondary" onClick={() => openTimer("Quick Timer", 45, false)}><Timer className="h-4 w-4" /> Quick Timer</Button><Button onClick={completeSession}><Plus className="h-4 w-4" /> Complete Session</Button></div>
-                  </CardContent>
-                </Card>
-              </div>
             </div>
           </TabsContent>
+          <TabsContent value="session">
+  <div className="space-y-6">
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-2xl text-white">Session Overview</CardTitle>
+        <CardDescription className="text-slate-200">
+          A cleaner, more professional session view with separate warm-up, work, and cooldown sections.
+        </CardDescription>
+      </CardHeader>
+
+      <CardContent className="space-y-5">
+        <div className="rounded-2xl border border-slate-700 bg-slate-800/80 p-4">
+          <div className="mb-2 flex items-center gap-2 text-slate-50">
+            <Shield className="h-4 w-4" /> Session check
+          </div>
+          <p className={cx(
+            "text-sm leading-relaxed",
+            safetyMessage.includes("good") ? "text-emerald-300" : "text-amber-300"
+          )}>
+            {safetyMessage}
+          </p>
+        </div>
+
+        <SectionCard
+          icon={<Zap className="h-4 w-4" />}
+          title="Warm-Up"
+          subtitle="Preparation sequence"
+        >
+          {WARMUP_STEPS.map((step) => (
+            <TimerRow
+              key={step.id}
+              label={step.label}
+              timeLabel={formatTime(step.seconds)}
+              onStart={() => openTimer(step.label, step.seconds, true)}
+            />
+          ))}
+        </SectionCard>
+
+        <SectionCard
+          icon={<Target className="h-4 w-4" />}
+          title="Main Work"
+          subtitle={`Selected exercises: ${selected.length} / ${currentWeek.maxExercises}`}
+          right={
+            <Badge className="border-emerald-500/30 bg-emerald-500/15 text-emerald-100">
+              {Math.round(
+                chosenItems.reduce(
+                  (sum, item) =>
+                    sum +
+                    Math.round(item.timerSeconds * currentWeek.workTimeScale) *
+                      (item.sets + currentWeek.workSetsBonus),
+                  0
+                ) / 60
+              )}{" "}
+              min
+            </Badge>
+          }
+        >
+          <div className="space-y-2">
+            {chosenItems.map((item) => {
+              const scaledTime = Math.round(
+                item.timerSeconds * currentWeek.workTimeScale
+              );
+
+              return (
+                <div
+                  key={item.id}
+                  className="flex items-center justify-between gap-3 rounded-2xl border border-slate-700 bg-slate-800/80 px-4 py-3"
+                >
+                  <div>
+                    <div className="font-medium text-white">{item.name}</div>
+                    <div className="text-sm text-slate-200">
+                      {displayPrescription(item, currentWeek)}
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    {item.mode === "time" ? (
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        className="rounded-xl"
+                        onClick={() =>
+                          openTimer(item.name, scaledTime, true)
+                        }
+                      >
+                        <Timer className="h-4 w-4" />{" "}
+                        {formatTime(scaledTime)}
+                      </Button>
+                    ) : (
+                      <Badge className="border-slate-600 bg-slate-900 text-slate-50">
+                        Reps
+                      </Badge>
+                    )}
+
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="rounded-xl"
+                      onClick={() => removeFromSession(item.id)}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </SectionCard>
+
+        <SectionCard
+          icon={<Wind className="h-4 w-4" />}
+          title="Cooldown"
+          subtitle="Recovery sequence"
+        >
+          {COOLDOWN_STEPS.map((step) => (
+            <TimerRow
+              key={step.id}
+              label={step.label}
+              timeLabel={formatTime(step.seconds)}
+              onStart={() => openTimer(step.label, step.seconds, true)}
+            />
+          ))}
+        </SectionCard>
+
+        <div className="grid grid-cols-2 gap-3">
+          <Button
+            variant="secondary"
+            onClick={() => openTimer("Quick Timer", 45, false)}
+          >
+            <Timer className="h-4 w-4" /> Quick Timer
+          </Button>
+
+          <Button onClick={completeSession}>
+            <Plus className="h-4 w-4" /> Complete Session
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
+  </div>
+</TabsContent>
 
           <TabsContent value="flow">
             <div className="grid gap-6 xl:grid-cols-[0.78fr_1.22fr]">
