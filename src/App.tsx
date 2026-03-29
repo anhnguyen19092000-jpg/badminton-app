@@ -280,7 +280,23 @@ const nextFlowStep = () => {
     "Speed & Reaction": ["split-step-hops", "mirror", "lateral-shuffle", "reverse-chase", "shadow-6", "skater-hop", "mountain-climber"],
     "Core & Stability": ["planks", "dead-bug", "hollow-hold", "glute-bridge", "band-shoulders", "band-pullapart"],
   };
-  const addSmartSession = () => { const pool = smartTemplates[goal] || smartTemplates["Footwork + Power"]; setSelected(pool.slice(0, currentWeek.maxExercises)); setFlowIndex(0); setFlowRunning(false); };
+ const addSmartSession = () => {
+  const pool = [...(smartTemplates[goal] || smartTemplates["Footwork + Power"])];
+  const currentSet = new Set(selected);
+
+  const shuffled = pool.sort(() => Math.random() - 0.5);
+
+  const differentFirst = [
+    ...shuffled.filter((id) => !currentSet.has(id)),
+    ...shuffled.filter((id) => currentSet.has(id)),
+  ];
+
+  const nextSelection = differentFirst.slice(0, currentWeek.maxExercises);
+
+  setSelected(nextSelection);
+  setFlowIndex(0);
+  setFlowRunning(false);
+};
   const completeSession = () => { const minutes = Math.max(currentWeek.duration, Math.round(totalEstimatedSeconds / 60)); const baseXP = selected.length * 18 + currentWeek.week * 14 + currentWeek.workSetsBonus * 10; const bonus = selected.length >= currentWeek.maxExercises ? 35 : 15; const earned = baseXP + bonus; const today = new Date().toISOString().slice(0, 10); setLogs((prev) => [{ date: today, session: `${goal} • Week ${week}`, minutes, xp: earned }, ...prev].slice(0, 20)); };
   const removeFromSession = (id) => { setSelected((prev) => prev.filter((value) => value !== id)); resetFlow(); };
   const resetEverything = () => { setWeek(1); setSelected(DEFAULT_SESSION); setGoal("Footwork + Power"); setSearch(""); setLogs(INITIAL_LOGS); setTimerRunning(false); setTimerOpen(false); setSecondsLeft(45); setTimerStartValue(45); setTimerLocked(true); setTimerLabel("Interval Timer"); setFlowIndex(0); setFlowRunning(false); };
