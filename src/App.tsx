@@ -58,12 +58,12 @@ const DRILLS = [
 ];
 
 const WEEK_PLAN = [
-  { week: 1, title: "Foundation", duration: 45, maxExercises: 6, workSetsBonus: 0, workTimeScale: 1.0, restScale: 1.0, xpGoal: 300, focus: "Technique first. Keep sessions shorter, cleaner, and controlled." },
-  { week: 2, title: "Volume Build", duration: 50, maxExercises: 6, workSetsBonus: 0, workTimeScale: 1.05, restScale: 0.95, xpGoal: 420, focus: "Slightly more work density. Same cap, better quality and consistency." },
-  { week: 3, title: "Movement Upgrade", duration: 55, maxExercises: 7, workSetsBonus: 1, workTimeScale: 1.1, restScale: 0.9, xpGoal: 560, focus: "Add a little volume and more demanding footwork choices." },
-  { week: 4, title: "Power Phase", duration: 60, maxExercises: 7, workSetsBonus: 1, workTimeScale: 1.15, restScale: 0.85, xpGoal: 720, focus: "More explosive work, stronger pushes, tighter recovery under fatigue." },
-  { week: 5, title: "Sharpness", duration: 65, maxExercises: 8, workSetsBonus: 1, workTimeScale: 1.2, restScale: 0.8, xpGoal: 900, focus: "Heavier mix of speed and power, but still keep the movement clean." },
-  { week: 6, title: "Peak Week", duration: 70, maxExercises: 8, workSetsBonus: 2, workTimeScale: 1.25, restScale: 0.75, xpGoal: 1100, focus: "Best mix of footwork, explosiveness, and repeatability." },
+  { week: 1, title: "Foundation", duration: 45, maxExercises: 8, workSetsBonus: 0, workTimeScale: 1.0, restScale: 1.0, xpGoal: 300, focus: "Technique first. Keep sessions shorter, cleaner, and controlled." },
+  { week: 2, title: "Volume Build", duration: 50, maxExercises: 8, workSetsBonus: 0, workTimeScale: 1.05, restScale: 0.95, xpGoal: 420, focus: "Slightly more work density. Same cap, better quality and consistency." },
+  { week: 3, title: "Movement Upgrade", duration: 55, maxExercises: 9, workSetsBonus: 1, workTimeScale: 1.1, restScale: 0.9, xpGoal: 560, focus: "Add a little volume and more demanding footwork choices." },
+  { week: 4, title: "Power Phase", duration: 60, maxExercises: 9, workSetsBonus: 1, workTimeScale: 1.15, restScale: 0.85, xpGoal: 720, focus: "More explosive work, stronger pushes, tighter recovery under fatigue." },
+  { week: 5, title: "Sharpness", duration: 65, maxExercises: 10, workSetsBonus: 1, workTimeScale: 1.2, restScale: 0.8, xpGoal: 900, focus: "Heavier mix of speed and power, but still keep the movement clean." },
+  { week: 6, title: "Peak Week", duration: 70, maxExercises: 10, workSetsBonus: 2, workTimeScale: 1.25, restScale: 0.75, xpGoal: 1100, focus: "Best mix of footwork, explosiveness, and repeatability." },
 ];
 
 const DEFAULT_SESSION = ["shadow-6", "rear-recovery", "net-lunge", "squats", "lunges", "pushups"];
@@ -253,18 +253,16 @@ export default function BadmintonTrainingApp() {
   const resetFlow = () => { setFlowIndex(0); setFlowRunning(false); if (sessionFlow[0]) { setSecondsLeft(sessionFlow[0].seconds); setTimerStartValue(sessionFlow[0].seconds); } };
   const startFlowStep = (index = flowIndex) => { const step = sessionFlow[index]; if (!step) return; setFlowIndex(index); setSecondsLeft(step.seconds); setTimerStartValue(step.seconds); setFlowRunning(true); };
 const nextFlowStep = () => {
-  const isLastStep = flowIndex >= sessionFlow.length - 1;
+  const nextIndex = flowIndex + 1;
 
-  if (isLastStep) {
-    setFlowRunning(false);
+  if (nextIndex >= sessionFlow.length) {
     completeSession();
     return;
   }
 
-  const nextIndex = flowIndex + 1;
   setFlowIndex(nextIndex);
-  const step = sessionFlow[nextIndex];
 
+  const step = sessionFlow[nextIndex];
   if (step) {
     setSecondsLeft(step.seconds);
     setTimerStartValue(step.seconds);
