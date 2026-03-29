@@ -272,29 +272,89 @@ const nextFlowStep = () => {
 };
   const toggleItem = (id) => setSelected((prev) => prev.includes(id) ? prev.filter((value) => value !== id) : prev.length >= currentWeek.maxExercises ? prev : [...prev, id]);
   const smartTemplates = {
-    "Footwork + Power": ["shadow-6", "smash-combo", "rear-recovery", "split-step-hops", "squats", "plyo-jumps", "planks", "single-leg-calf"],
-    "Leg Day": ["squats", "lunges", "split-squat", "rdl", "glute-bridge", "single-leg-calf", "planks", "dead-bug"],
-    "Shoulder Safety": ["shadow-6", "net-lunge", "pushups", "rows", "band-shoulders", "band-pullapart", "planks", "dead-bug"],
-    "Speed & Reaction": ["split-step-hops", "mirror", "lateral-shuffle", "reverse-chase", "shadow-6", "skater-hop", "mountain-climber"],
-    "Core & Stability": ["planks", "dead-bug", "hollow-hold", "glute-bridge", "band-shoulders", "band-pullapart"],
-  };
- const addSmartSession = () => {
-  const pool = smartTemplates[goal] || smartTemplates["Footwork + Power"];
+  "Footwork + Power": [
+    "shadow-6",
+    "smash-combo",
+    "rear-recovery",
+    "split-step-hops",
+    "lateral-shuffle",
+    "reverse-chase",
+    "mirror",
+    "squats",
+    "lunges",
+    "split-squat",
+    "plyo-jumps",
+    "skater-hop",
+    "planks",
+    "single-leg-calf",
+    "mountain-climber"
+  ],
+  "Leg Day": [
+    "squats",
+    "lunges",
+    "split-squat",
+    "rdl",
+    "glute-bridge",
+    "single-leg-calf",
+    "plyo-jumps",
+    "skater-hop",
+    "planks",
+    "dead-bug",
+    "hollow-hold"
+  ],
+  "Shoulder Safety": [
+    "shadow-6",
+    "net-lunge",
+    "pushups",
+    "rows",
+    "band-shoulders",
+    "band-pullapart",
+    "planks",
+    "dead-bug",
+    "glute-bridge",
+    "hollow-hold"
+  ],
+  "Speed & Reaction": [
+    "split-step-hops",
+    "mirror",
+    "lateral-shuffle",
+    "reverse-chase",
+    "shadow-6",
+    "rear-recovery",
+    "smash-combo",
+    "skater-hop",
+    "mountain-climber",
+    "plyo-jumps"
+  ],
+  "Core & Stability": [
+    "planks",
+    "dead-bug",
+    "hollow-hold",
+    "glute-bridge",
+    "band-shoulders",
+    "band-pullapart",
+    "single-leg-calf",
+    "rows",
+    "pushups"
+  ],
+};
+const addSmartSession = () => {
+  const pool = [...(smartTemplates[goal] || smartTemplates["Footwork + Power"])];
+  const currentSet = new Set(selected);
 
-  const footwork = pool.filter(d => d.type === "Footwork");
-  const strength = pool.filter(d => d.type === "Strength");
-  const core = pool.filter(d => d.type === "Core");
-  const conditioning = pool.filter(d => d.type === "Conditioning");
+  const shuffled = pool.sort(() => Math.random() - 0.5);
 
-  const pickRandom = (arr, count) =>
-    arr.sort(() => Math.random() - 0.5).slice(0, count);
-
-  let selectedItems = [
-    ...pickRandom(footwork, 2),
-    ...pickRandom(strength, 2),
-    ...pickRandom(core, 1),
-    ...pickRandom(conditioning, 1),
+  const differentFirst = [
+    ...shuffled.filter((id) => !currentSet.has(id)),
+    ...shuffled.filter((id) => currentSet.has(id)),
   ];
+
+  const nextSelection = differentFirst.slice(0, currentWeek.maxExercises);
+
+  setSelected(nextSelection);
+  setFlowIndex(0);
+  setFlowRunning(false);
+};
 
   // fill remaining slots
   while (selectedItems.length < currentWeek.maxExercises) {
