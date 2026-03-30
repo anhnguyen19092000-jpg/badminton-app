@@ -340,16 +340,8 @@ const nextFlowStep = () => {
 };
 const addSmartSession = () => {
   const pool = [...(smartTemplates[goal] || smartTemplates["Footwork + Power"])];
-  const currentSet = new Set(selected);
-
   const shuffled = pool.sort(() => Math.random() - 0.5);
-
-  const differentFirst = [
-    ...shuffled.filter((id) => !currentSet.has(id)),
-    ...shuffled.filter((id) => currentSet.has(id)),
-  ];
-
-  const nextSelection = differentFirst.slice(0, currentWeek.maxExercises);
+  const nextSelection = shuffled.slice(0, currentWeek.maxExercises);
 
   setSelected(nextSelection);
   setFlowIndex(0);
