@@ -237,7 +237,7 @@ function playCue(kind) {
     gain.connect(ctx.destination);
     oscillator.type = "sine";
     oscillator.frequency.value = kind === "rest" ? 440 : kind === "done" ? 660 : 540;
-    gain.gain.value = 0.04;
+    gain.gain.value = 0.2;
     oscillator.start();
     oscillator.stop(ctx.currentTime + 0.12);
     oscillator.onended = () => ctx.close();
@@ -405,17 +405,17 @@ export default function BadmintonTrainingApp() {
   };
 
   const startModalTimer = () => {
-    if (timerSecondsLeft <= 0) {
-      setTimerSecondsLeft(timerStartValue);
-    }
-    const remaining = timerSecondsLeft > 0 ? timerSecondsLeft : timerStartValue;
-    setTimerEndsAt(Date.now() + remaining * 1000);
-    setTimerRunning(true);
-  };
+  const remaining =
+    timerSecondsLeft > 0 ? timerSecondsLeft : timerStartValue;
 
+  setTimerSecondsLeft(remaining); // sync it properly
+  setTimerEndsAt(Date.now() + remaining * 1000);
+  setTimerRunning(true);
+};
+  
   const pauseModalTimer = () => {
     if (timerRunning && timerEndsAt) {
-      const remaining = Math.max(0, Math.ceil((timerEndsAt - Date.now()) / 1000));
+      const remaining = Math.max(1, Math.ceil((timerEndsAt - Date.now()) / 1000));
       setTimerSecondsLeft(remaining);
     }
     setTimerRunning(false);
