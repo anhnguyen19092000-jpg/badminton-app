@@ -190,6 +190,7 @@ export default function BadmintonTrainingApp() {
   const [search, setSearch] = useState("");
   const [goal, setGoal] = useState("Footwork + Power");
   const [timerOpen, setTimerOpen] = useState(false);
+  const [sessionCompleteOpen, setSessionCompleteOpen] = useState(false);
   const [timerLabel, setTimerLabel] = useState("Interval Timer");
   const [secondsLeft, setSecondsLeft] = useState(45);
   const [timerStartValue, setTimerStartValue] = useState(45);
@@ -357,8 +358,8 @@ const addSmartSession = () => {
   setFlowIndex(0);
   setFlowRunning(false);
 };
-
-  const completeSession = () => { const minutes = Math.max(currentWeek.duration, Math.round(totalEstimatedSeconds / 60)); const baseXP = selected.length * 18 + currentWeek.week * 14 + currentWeek.workSetsBonus * 10; const bonus = selected.length >= currentWeek.maxExercises ? 35 : 15; const earned = baseXP + bonus; const today = new Date().toISOString().slice(0, 10); setLogs((prev) => [{ date: today, session: `${goal} • Week ${week}`, minutes, xp: earned }, ...prev].slice(0, 20)); };
+  
+  const completeSession = () => { const minutes = Math.max(currentWeek.duration, Math.round(totalEstimatedSeconds / 60)); const baseXP = selected.length * 18 + currentWeek.week * 14 + currentWeek.workSetsBonus * 10; const bonus = selected.length >= currentWeek.maxExercises ? 35 : 15; const earned = baseXP + bonus; const today = new Date().toISOString().slice(0, 10); setLogs((prev) => [{ date: today, session: `${goal} • Week ${week}`, minutes, xp: earned }, ...prev].slice(0, 20)); setSessionCompleteOpen(true); };
   const removeFromSession = (id) => { setSelected((prev) => prev.filter((value) => value !== id)); resetFlow(); };
   const resetEverything = () => { setWeek(1); setSelected(DEFAULT_SESSION); setGoal("Footwork + Power"); setSearch(""); setLogs(INITIAL_LOGS); setTimerRunning(false); setTimerOpen(false); setSecondsLeft(45); setTimerStartValue(45); setTimerLocked(true); setTimerLabel("Interval Timer"); setFlowIndex(0); setFlowRunning(false); };
   const achievements = ACHIEVEMENTS.map((achievement) => ({ ...achievement, unlocked: achievement.check({ logs, weekProgress, week, level }) }));
@@ -704,18 +705,122 @@ const addSmartSession = () => {
           </TabsContent>
         </Tabs>
 
+        
         <Dialog open={timerOpen} onOpenChange={setTimerOpen}>
-          <DialogContent>
-            <DialogHeader>
-              <div className="flex items-start justify-between gap-4"><div><DialogTitle>{timerLabel}</DialogTitle><DialogDescription>{timerLocked ? "Locked to the selected exercise or session step." : "Custom timer mode."}</DialogDescription></div><button className="rounded-xl p-2 text-slate-400 hover:bg-slate-800 hover:text-white" onClick={() => setTimerOpen(false)}><X className="h-4 w-4" /></button></div>
-            </DialogHeader>
-            <div className="space-y-6 p-6">
-              <div className="rounded-3xl border border-slate-700 bg-slate-900 p-6 text-center text-6xl font-bold tracking-tight text-white">{formatTime(secondsLeft)}</div>
-              {!timerLocked && <div className="grid grid-cols-3 gap-3"><Button variant="secondary" onClick={() => { setSecondsLeft(30); setTimerStartValue(30); setTimerRunning(false); }}>30s</Button><Button variant="secondary" onClick={() => { setSecondsLeft(45); setTimerStartValue(45); setTimerRunning(false); }}>45s</Button><Button variant="secondary" onClick={() => { setSecondsLeft(60); setTimerStartValue(60); setTimerRunning(false); }}>60s</Button></div>}
-              <div className="grid grid-cols-3 gap-3"><Button onClick={() => setTimerRunning(true)}>Start</Button><Button variant="secondary" onClick={() => setTimerRunning(false)}>Pause</Button><Button variant="secondary" onClick={() => { setTimerRunning(false); setSecondsLeft(timerStartValue); }}>Reset</Button></div>
-            </div>
-          </DialogContent>
-        </Dialog>
+  <DialogContent>
+    <DialogHeader>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <DialogTitle>{timerLabel}</DialogTitle>
+          <DialogDescription>
+            {timerLocked
+              ? "Locked to the selected exercise or session step."
+              : "Custom timer mode."}
+          </DialogDescription>
+        </div>
+        <button
+          className="rounded-xl p-2 text-slate-400 hover:bg-slate-800 hover:text-white"
+          onClick={() => setTimerOpen(false)}
+        >
+          <X className="h-4 w-4" />
+        </button>
+      </div>
+    </DialogHeader>
+
+    <div className="space-y-6 p-6">
+      <div className="rounded-3xl border border-slate-700 bg-slate-900 p-6 text-center text-6xl font-bold tracking-tight text-white">
+        {formatTime(secondsLeft)}
+      </div>
+
+      {!timerLocked && (
+        <div className="grid grid-cols-3 gap-3">
+          <Button
+            variant="secondary"
+            onClick={() => {
+              setSecondsLeft(30);
+              setTimerStartValue(30);
+              setTimerRunning(false);
+            }}
+          >
+            30s
+          </Button>
+          <Button
+            variant="secondary"
+            onClick={() => {
+              setSecondsLeft(45);
+              setTimerStartValue(45);
+              setTimerRunning(false);
+            }}
+          >
+            45s
+          </Button>
+          <Button
+            variant="secondary"
+            onClick={() => {
+              setSecondsLeft(60);
+              setTimerStartValue(60);
+              setTimerRunning(false);
+            }}
+          >
+            60s
+          </Button>
+        </div>
+      )}
+
+      <div className="grid grid-cols-3 gap-3">
+        <Button onClick={() => setTimerRunning(true)}>Start</Button>
+        <Button variant="secondary" onClick={() => setTimerRunning(false)}>
+          Pause
+        </Button>
+        <Button
+          variant="secondary"
+          onClick={() => {
+            setTimerRunning(false);
+            setSecondsLeft(timerStartValue);
+          }}
+        >
+          Reset
+        </Button>
+      </div>
+    </div>
+  </DialogContent>
+</Dialog>
+
+<Dialog open={sessionCompleteOpen} onOpenChange={setSessionCompleteOpen}>
+  <DialogContent>
+    <DialogHeader>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <DialogTitle>Session Complete 🎉</DialogTitle>
+          <DialogDescription>
+            Nice work. Your workout has been logged and your progress was saved.
+          </DialogDescription>
+        </div>
+        <button
+          className="rounded-xl p-2 text-slate-400 hover:bg-slate-800 hover:text-white"
+          onClick={() => setSessionCompleteOpen(false)}
+        >
+          <X className="h-4 w-4" />
+        </button>
+      </div>
+    </DialogHeader>
+
+    <div className="space-y-4 p-6">
+      <div className="rounded-3xl border border-emerald-500/30 bg-emerald-500/10 p-5 text-center">
+        <div className="text-lg font-semibold text-white">
+          Workout logged successfully
+        </div>
+        <div className="mt-2 text-sm text-slate-300">
+          Keep stacking sessions and your level will keep climbing.
+        </div>
+      </div>
+
+      <Button className="w-full" onClick={() => setSessionCompleteOpen(false)}>
+        Nice
+      </Button>
+    </div>
+  </DialogContent>
+</Dialog>
       </div>
     </div>
   );
