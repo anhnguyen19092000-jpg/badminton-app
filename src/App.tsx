@@ -55,6 +55,11 @@ const DRILLS = [
   { id: "split-squat", type: "Strength", category: "Lower Body", name: "Split Squats", difficulty: "Intermediate", intensity: "Medium", mode: "reps", timerSeconds: 45, sets: 3, reps: "8–10 / leg", desc: "Single-leg strength that transfers nicely to lunges and push-offs.", cues: ["Stay stacked", "Front foot stable", "Drive up hard"] },
   { id: "skater-hop", type: "Power", category: "Explosive", name: "Skater Hops", difficulty: "Intermediate", intensity: "High", mode: "reps", timerSeconds: 30, sets: 3, reps: "8 / side", desc: "Lateral explosive power for faster court pushes.", cues: ["Stick the landing", "Use arms", "Jump sideways cleanly"] },
   { id: "mountain-climber", type: "Conditioning", category: "Conditioning", name: "Mountain Climbers", difficulty: "Beginner", intensity: "Medium", mode: "time", timerSeconds: 25, sets: 3, desc: "Simple conditioning finisher for work capacity and trunk control.", cues: ["Stay braced", "Drive knees", "Keep hips steady"] },
+  { id: "scissor-kick", type: "Footwork", category: "Court Movement", name: "Scissor Kick Recovery", difficulty: "Intermediate", intensity: "High", mode: "time", timerSeconds: 30, sets: 3, desc: "Rear court scissor kick into fast recovery to base.", cues: ["Rotate hips", "Land balanced", "Recover fast"] },
+  { id: "net-kill-shadow", type: "Footwork", category: "Court Movement", name: "Net Kill Shadow", difficulty: "Beginner", intensity: "Medium", mode: "time", timerSeconds: 25, sets: 3, desc: "Quick front court kill movement with recovery.", cues: ["Stay low", "Explode forward", "Recover quick"] },
+  { id: "lateral-hop", type: "Conditioning", category: "Conditioning", name: "Lateral Line Hops", difficulty: "Beginner", intensity: "Medium", mode: "time", timerSeconds: 20, sets: 3, desc: "Fast side-to-side hops for foot speed.", cues: ["Quick feet", "Stay light", "Minimal ground time"] },
+  { id: "bulgarian-split", type: "Strength", category: "Lower Body", name: "Bulgarian Split Squat", difficulty: "Intermediate", intensity: "High", mode: "reps", timerSeconds: 40, sets: 3, reps: "8 / leg", desc: "Single-leg strength for powerful lunges and push-offs.", cues: ["Knee stable", "Drive up", "Control down"] },
+  { id: "plank-shoulder-tap", type: "Core", category: "Core", name: "Plank Shoulder Taps", difficulty: "Beginner", intensity: "Medium", mode: "time", timerSeconds: 30, sets: 3, desc: "Core stability while resisting rotation.", cues: ["Don’t sway", "Slow taps", "Brace core"] },
 ];
 
 const WEEK_PLAN = [
@@ -272,23 +277,28 @@ const nextFlowStep = () => {
 };
   const toggleItem = (id) => setSelected((prev) => prev.includes(id) ? prev.filter((value) => value !== id) : prev.length >= currentWeek.maxExercises ? prev : [...prev, id]);
   const smartTemplates = {
-  "Footwork + Power": [
-    "shadow-6",
-    "smash-combo",
-    "rear-recovery",
-    "split-step-hops",
-    "lateral-shuffle",
-    "reverse-chase",
-    "mirror",
-    "squats",
-    "lunges",
-    "split-squat",
-    "plyo-jumps",
-    "skater-hop",
-    "planks",
-    "single-leg-calf",
-    "mountain-climber"
-  ],
+ "Footwork + Power": [
+  "shadow-6",
+  "smash-combo",
+  "rear-recovery",
+  "split-step-hops",
+  "lateral-shuffle",
+  "reverse-chase",
+  "mirror",
+  "scissor-kick",
+  "net-kill-shadow",
+  "squats",
+  "lunges",
+  "split-squat",
+  "bulgarian-split",
+  "plyo-jumps",
+  "skater-hop",
+  "lateral-hop",
+  "planks",
+  "plank-shoulder-tap",
+  "single-leg-calf",
+  "mountain-climber"
+],
   "Leg Day": [
     "squats",
     "lunges",
