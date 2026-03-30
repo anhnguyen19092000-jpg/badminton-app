@@ -22,6 +22,8 @@ import {
   Timer,
   Trash2,
   Trophy,
+  Volume2,
+  VolumeX,
   Wind,
   X,
   Zap,
@@ -100,41 +102,82 @@ const ACHIEVEMENTS = [
 ];
 
 function clamp(n, min, max) { return Math.max(min, Math.min(max, n)); }
-function formatTime(totalSeconds) { const mins = Math.floor(totalSeconds / 60); const secs = totalSeconds % 60; return `${String(mins).padStart(2, "0")}:${String(secs).padStart(2, "0")}`; }
-function displayPrescription(item, currentWeek) { const adjustedSets = item.sets + currentWeek.workSetsBonus; if (item.mode === "reps") return `${adjustedSets} x ${item.reps}`; const scaledTime = Math.round(item.timerSeconds * currentWeek.workTimeScale); return `${adjustedSets} x ${formatTime(scaledTime)}`; }
+function formatTime(totalSeconds) {
+  const mins = Math.floor(totalSeconds / 60);
+  const secs = totalSeconds % 60;
+  return `${String(mins).padStart(2, "0")}:${String(secs).padStart(2, "0")}`;
+}
+function displayPrescription(item, currentWeek) {
+  const adjustedSets = item.sets + currentWeek.workSetsBonus;
+  if (item.mode === "reps") return `${adjustedSets} x ${item.reps}`;
+  const scaledTime = Math.round(item.timerSeconds * currentWeek.workTimeScale);
+  return `${adjustedSets} x ${formatTime(scaledTime)}`;
+}
 function getRank(level) { return RANKS[clamp(level - 1, 0, RANKS.length - 1)]; }
 function getSessionSteps(chosenItems, currentWeek) {
   const steps = [];
+
   WARMUP_STEPS.forEach((step, index) => {
-    steps.push({ id: step.id, label: step.label, seconds: step.seconds, kind: "Warm-Up", locked: true });
+    steps.push({ id: step.id, label: step.label, seconds: step.seconds, kind: "Warm-Up", locked: true, drillId: null });
     if (index < WARMUP_STEPS.length - 1) {
       const restSeconds = Math.round(REST_RULES.warmupTransition * currentWeek.restScale);
-      steps.push({ id: `${step.id}-rest`, label: "Transition Rest", seconds: restSeconds, kind: "Rest", locked: true, prescription: formatTime(restSeconds) });
+      steps.push({ id: `${step.id}-rest`, label: "Transition Rest", seconds: restSeconds, kind: "Rest", locked: true, prescription: formatTime(restSeconds), drillId: null });
     }
   });
+
   chosenItems.forEach((item, itemIndex) => {
     const totalSets = item.sets + currentWeek.workSetsBonus;
     const scaledTime = Math.round(item.timerSeconds * currentWeek.workTimeScale);
+
     for (let i = 0; i < totalSets; i += 1) {
-      steps.push({ id: `${item.id}-${i + 1}`, label: `${item.name} · Set ${i + 1}`, seconds: item.mode === "time" ? scaledTime : 0, kind: item.mode === "time" ? "Timed Drill" : "Work Block", locked: item.mode === "time", prescription: item.mode === "reps" ? item.reps : formatTime(scaledTime) });
+      steps.push({
+        id: `${item.id}-${i + 1}`,
+        label: `${item.name} · Set ${i + 1}`,
+        seconds: item.mode === "time" ? scaledTime : 0,
+        kind: item.mode === "time" ? "Timed Drill" : "Work Block",
+        locked: item.mode === "time",
+        prescription: item.mode === "reps" ? item.reps : formatTime(scaledTime),
+        drillId: item.id,
+        setNumber: i + 1,
+      });
+
       if (i < totalSets - 1) {
         const baseRest = item.mode === "time" ? REST_RULES.timedSetRest : REST_RULES.repSetRest;
         const scaledRest = Math.round(baseRest * currentWeek.restScale);
-        steps.push({ id: `${item.id}-${i + 1}-rest`, label: `${item.name} · Rest`, seconds: scaledRest, kind: "Rest", locked: true, prescription: formatTime(scaledRest) });
+        steps.push({
+          id: `${item.id}-${i + 1}-rest`,
+          label: `${item.name} · Rest`,
+          seconds: scaledRest,
+          kind: "Rest",
+          locked: true,
+          prescription: formatTime(scaledRest),
+          drillId: item.id,
+        });
       }
     }
+
     if (itemIndex < chosenItems.length - 1) {
       const transitionSeconds = Math.round(REST_RULES.exerciseTransition * currentWeek.restScale);
-      steps.push({ id: `${item.id}-transition`, label: "Exercise Transition", seconds: transitionSeconds, kind: "Rest", locked: true, prescription: formatTime(transitionSeconds) });
+      steps.push({
+        id: `${item.id}-transition`,
+        label: "Exercise Transition",
+        seconds: transitionSeconds,
+        kind: "Rest",
+        locked: true,
+        prescription: formatTime(transitionSeconds),
+        drillId: item.id,
+      });
     }
   });
+
   COOLDOWN_STEPS.forEach((step, index) => {
-    steps.push({ id: step.id, label: step.label, seconds: step.seconds, kind: "Cooldown", locked: true });
+    steps.push({ id: step.id, label: step.label, seconds: step.seconds, kind: "Cooldown", locked: true, drillId: null });
     if (index < COOLDOWN_STEPS.length - 1) {
       const restSeconds = Math.round(REST_RULES.cooldownTransition * currentWeek.restScale);
-      steps.push({ id: `${step.id}-rest`, label: "Transition Rest", seconds: restSeconds, kind: "Rest", locked: true, prescription: formatTime(restSeconds) });
+      steps.push({ id: `${step.id}-rest`, label: "Transition Rest", seconds: restSeconds, kind: "Rest", locked: true, prescription: formatTime(restSeconds), drillId: null });
     }
   });
+
   return steps;
 }
 
@@ -166,7 +209,9 @@ function Button({ className = "", variant = "default", size = "default", childre
   const sizes = { default: "h-11 px-4 py-2", sm: "h-9 px-3 py-2", icon: "h-10 w-10 p-0 justify-center" };
   return <button {...props} className={cx("inline-flex items-center justify-center gap-2 rounded-2xl text-sm font-medium transition disabled:cursor-not-allowed disabled:opacity-50", variants[variant], sizes[size], className)}>{children}</button>;
 }
-function Input(props) { return <div className="relative"><Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" /><input {...props} className={cx("h-11 w-full rounded-2xl border border-slate-600 bg-slate-800 pl-10 pr-4 text-white outline-none placeholder:text-slate-400 focus:border-emerald-500", props.className)} /></div>; }
+function Input(props) {
+  return <div className="relative"><Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" /><input {...props} className={cx("h-11 w-full rounded-2xl border border-slate-600 bg-slate-800 pl-10 pr-4 text-white outline-none placeholder:text-slate-400 focus:border-emerald-500", props.className)} /></div>;
+}
 function Progress({ value, className = "" }) { return <div className={cx("h-3 overflow-hidden rounded-full bg-slate-800", className)}><div className="h-full rounded-full bg-emerald-500 transition-all" style={{ width: `${Math.max(0, Math.min(100, value))}%` }} /></div>; }
 function Checkbox({ checked, onCheckedChange }) { return <button type="button" onClick={onCheckedChange} className={cx("flex h-5 w-5 items-center justify-center rounded-md border transition", checked ? "border-emerald-500 bg-emerald-500 text-white" : "border-slate-500 bg-slate-900 text-transparent")}><Check className="h-3.5 w-3.5" /></button>; }
 function Tabs({ defaultValue, children, className = "" }) { const [value, setValue] = useState(defaultValue); const items = React.Children.map(children, (child) => React.isValidElement(child) ? React.cloneElement(child, { tabsValue: value, setTabsValue: setValue }) : child); return <div className={className}>{items}</div>; }
@@ -175,38 +220,70 @@ function TabsTrigger({ value, children, tabsValue, setTabsValue, className = "" 
 function TabsContent({ value, children, tabsValue }) { return tabsValue === value ? <div>{children}</div> : null; }
 function Select({ value, onValueChange, children }) { return <select value={value} onChange={(e) => onValueChange(e.target.value)} className="h-11 w-full rounded-2xl border border-slate-600 bg-slate-800 px-4 text-white outline-none focus:border-emerald-500">{children}</select>; }
 function SelectItem({ value, children }) { return <option value={value}>{children}</option>; }
-function SelectTrigger({ children, className = "" }) { return <div className={className}>{children}</div>; }
-function SelectValue() { return null; }
-function SelectContent({ children }) { return children; }
 function Dialog({ open, onOpenChange, children }) { if (!open) return null; return <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" onClick={() => onOpenChange(false)}>{children}</div>; }
 function DialogContent({ className = "", children }) { return <div className={cx("w-full max-w-md rounded-[28px] border border-slate-700 bg-slate-950 text-slate-50 shadow-2xl", className)} onClick={(e) => e.stopPropagation()}>{children}</div>; }
 function DialogHeader({ children }) { return <div className="border-b border-slate-800 p-6">{children}</div>; }
 function DialogTitle({ className = "", children }) { return <div className={cx("text-lg font-semibold text-white", className)}>{children}</div>; }
 function DialogDescription({ className = "", children }) { return <div className={cx("mt-1 text-sm text-slate-300", className)}>{children}</div>; }
 
+function playCue(kind) {
+  try {
+    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+    if (!AudioCtx) return;
+    const ctx = new AudioCtx();
+    const oscillator = ctx.createOscillator();
+    const gain = ctx.createGain();
+    oscillator.connect(gain);
+    gain.connect(ctx.destination);
+    oscillator.type = "sine";
+    oscillator.frequency.value = kind === "rest" ? 440 : kind === "done" ? 660 : 540;
+    gain.gain.value = 0.04;
+    oscillator.start();
+    oscillator.stop(ctx.currentTime + 0.12);
+    oscillator.onended = () => ctx.close();
+  } catch {}
+}
+
 export default function BadmintonTrainingApp() {
-  const [week, setWeek] = useState(1);
-  const [selected, setSelected] = useState(DEFAULT_SESSION);
+  const [week, setWeek] = useState(() => Number(localStorage.getItem("badminton_week") || 1));
+  const [selected, setSelected] = useState(() => {
+    const saved = localStorage.getItem("badminton_selected");
+    return saved ? JSON.parse(saved) : DEFAULT_SESSION;
+  });
   const [search, setSearch] = useState("");
-  const [goal, setGoal] = useState("Footwork + Power");
+  const [goal, setGoal] = useState(() => localStorage.getItem("badminton_goal") || "Footwork + Power");
   const [timerOpen, setTimerOpen] = useState(false);
   const [sessionCompleteOpen, setSessionCompleteOpen] = useState(false);
+  const [sessionCompleteMeta, setSessionCompleteMeta] = useState({ xp: 0, minutes: 0, level: 1, rank: "Foundation Athlete" });
+  const [soundOn, setSoundOn] = useState(() => localStorage.getItem("badminton_sound") !== "off");
+
   const [timerLabel, setTimerLabel] = useState("Interval Timer");
-  const [secondsLeft, setSecondsLeft] = useState(45);
+  const [timerSecondsLeft, setTimerSecondsLeft] = useState(45);
   const [timerStartValue, setTimerStartValue] = useState(45);
   const [timerRunning, setTimerRunning] = useState(false);
   const [timerLocked, setTimerLocked] = useState(true);
+  const [timerEndsAt, setTimerEndsAt] = useState(null);
+
   const [logs, setLogs] = useState(() => {
-  const saved = localStorage.getItem("badminton_logs");
-  return saved ? JSON.parse(saved) : INITIAL_LOGS;
-});
-  useEffect(() => {
-  localStorage.setItem("badminton_logs", JSON.stringify(logs));
-}, [logs]);
+    const saved = localStorage.getItem("badminton_logs");
+    return saved ? JSON.parse(saved) : INITIAL_LOGS;
+  });
+
   const [flowIndex, setFlowIndex] = useState(0);
   const [flowRunning, setFlowRunning] = useState(false);
+  const [flowSecondsLeft, setFlowSecondsLeft] = useState(0);
+  const [flowEndsAt, setFlowEndsAt] = useState(null);
 
   const currentWeek = WEEK_PLAN[week - 1];
+  const filtered = useMemo(() => DRILLS.filter((item) => (`${item.name} ${item.type} ${item.category} ${item.desc}`).toLowerCase().includes(search.toLowerCase())), [search]);
+  const chosenItems = useMemo(() => DRILLS.filter((item) => selected.includes(item.id)), [selected]);
+  const drillsById = useMemo(() => Object.fromEntries(DRILLS.map((drill) => [drill.id, drill])), []);
+  const sessionFlow = useMemo(() => getSessionSteps(chosenItems, currentWeek), [chosenItems, currentWeek]);
+  const currentFlowStep = sessionFlow[flowIndex] ?? null;
+  const nextFlowStepData = sessionFlow[flowIndex + 1] ?? null;
+  const currentFlowDrill = currentFlowStep?.drillId ? drillsById[currentFlowStep.drillId] : null;
+  const nextFlowDrill = nextFlowStepData?.drillId ? drillsById[nextFlowStepData.drillId] : null;
+
   const totalXP = logs.reduce((sum, entry) => sum + entry.xp, 0);
   const rawLevel = Math.floor(totalXP / XP_PER_LEVEL) + 1;
   const level = clamp(rawLevel, 1, MAX_LEVEL);
@@ -216,158 +293,220 @@ export default function BadmintonTrainingApp() {
   const weeklyXP = logs.reduce((sum, entry) => sum + entry.xp, 0);
   const weekProgress = clamp((weeklyXP / currentWeek.xpGoal) * 100, 0, 100);
   const rank = getRank(level);
-
-  const filtered = useMemo(() => DRILLS.filter((item) => (`${item.name} ${item.type} ${item.category} ${item.desc}`).toLowerCase().includes(search.toLowerCase())), [search]);
-  const chosenItems = useMemo(() => DRILLS.filter((item) => selected.includes(item.id)), [selected]);
-  const sessionFlow = useMemo(() => getSessionSteps(chosenItems, currentWeek), [chosenItems, currentWeek]);
-  const currentFlowStep = sessionFlow[flowIndex] ?? null;
-  const nextFlowStepData = sessionFlow[flowIndex + 1] ?? null;
   const flowProgress = sessionFlow.length ? (Math.min(flowIndex + 1, sessionFlow.length) / sessionFlow.length) * 100 : 0;
   const totalEstimatedSeconds = useMemo(() => sessionFlow.reduce((sum, step) => sum + step.seconds, 0), [sessionFlow]);
+
   const safetyMessage = useMemo(() => {
     const hardCount = chosenItems.filter((item) => item.intensity === "High").length;
     if (selected.length > currentWeek.maxExercises) return `Too many exercises for Week ${week}. This week caps at ${currentWeek.maxExercises}.`;
-    if (hardCount > 4) return "This session is heavy on high-intensity work. Consider a cleaner balance if recovery starts slipping.";
+    if (hardCount > 5) return "This session is heavy on high-intensity work. Consider a cleaner balance if recovery starts slipping.";
     return "Session balance looks good.";
   }, [chosenItems, currentWeek, selected.length, week]);
 
-  useEffect(() => {
-    if (!timerRunning) return;
-    if (secondsLeft <= 0) { setTimerRunning(false); return; }
-    const id = window.setInterval(() => setSecondsLeft((value) => value - 1), 1000);
-    return () => window.clearInterval(id);
-  }, [timerRunning, secondsLeft]);
+  useEffect(() => { localStorage.setItem("badminton_logs", JSON.stringify(logs)); }, [logs]);
+  useEffect(() => { localStorage.setItem("badminton_week", String(week)); }, [week]);
+  useEffect(() => { localStorage.setItem("badminton_selected", JSON.stringify(selected)); }, [selected]);
+  useEffect(() => { localStorage.setItem("badminton_goal", goal); }, [goal]);
+  useEffect(() => { localStorage.setItem("badminton_sound", soundOn ? "on" : "off"); }, [soundOn]);
 
   useEffect(() => {
-    if (!flowRunning || !currentFlowStep) return;
-    if (secondsLeft <= 0) {
-      const isLast = flowIndex >= sessionFlow.length - 1;
-      if (isLast) setFlowRunning(false);
-      else {
-        const nextIndex = flowIndex + 1;
-        setFlowIndex(nextIndex);
-        setSecondsLeft(sessionFlow[nextIndex].seconds);
-        setTimerStartValue(sessionFlow[nextIndex].seconds);
+    const firstStep = sessionFlow[0];
+    if (!firstStep) return;
+    if (!flowRunning) {
+      const nextSeconds = currentFlowStep ? currentFlowStep.seconds : firstStep.seconds;
+      setFlowSecondsLeft(nextSeconds);
+    }
+  }, [sessionFlow, flowRunning]);
+
+  useEffect(() => {
+    if (!timerRunning || !timerEndsAt) return;
+    const tick = () => {
+      const remaining = Math.max(0, Math.ceil((timerEndsAt - Date.now()) / 1000));
+      setTimerSecondsLeft(remaining);
+      if (remaining <= 0) {
+        setTimerRunning(false);
+        setTimerEndsAt(null);
+        if (soundOn) playCue("done");
       }
+    };
+    tick();
+    const id = window.setInterval(tick, 250);
+    return () => window.clearInterval(id);
+  }, [timerRunning, timerEndsAt, soundOn]);
+
+  const completeSession = (options = {}) => {
+    const minutes = Math.max(currentWeek.duration, Math.round(totalEstimatedSeconds / 60));
+    const baseXP = selected.length * 18 + currentWeek.week * 14 + currentWeek.workSetsBonus * 10;
+    const bonus = selected.length >= currentWeek.maxExercises ? 35 : 15;
+    const earned = baseXP + bonus;
+    const today = new Date().toISOString().slice(0, 10);
+
+    setLogs((prev) => [{ date: today, session: `${goal} • Week ${week}`, minutes, xp: earned }, ...prev].slice(0, 20));
+    setSessionCompleteMeta({ xp: earned, minutes, level, rank });
+    setSessionCompleteOpen(true);
+
+    if (!options.keepFlowPosition) {
+      setFlowRunning(false);
+      setFlowEndsAt(null);
+    }
+    if (soundOn) playCue("done");
+  };
+
+  const announceFlowStep = (step) => {
+    if (!soundOn || !step) return;
+    playCue(step.kind === "Rest" ? "rest" : "work");
+  };
+
+  const advanceFlow = () => {
+    const nextIndex = flowIndex + 1;
+
+    if (nextIndex >= sessionFlow.length) {
+      completeSession();
       return;
     }
-    const id = window.setInterval(() => setSecondsLeft((value) => value - 1), 1000);
+
+    const nextStep = sessionFlow[nextIndex];
+    setFlowIndex(nextIndex);
+    setFlowRunning(false);
+    setFlowEndsAt(null);
+    setFlowSecondsLeft(nextStep.seconds);
+    announceFlowStep(nextStep);
+
+    if (nextStep.kind !== "Work Block" && nextStep.seconds > 0) {
+      setFlowEndsAt(Date.now() + nextStep.seconds * 1000);
+      setFlowRunning(true);
+    }
+  };
+
+  useEffect(() => {
+    if (!flowRunning || !flowEndsAt || !currentFlowStep || currentFlowStep.kind === "Work Block") return;
+    const tick = () => {
+      const remaining = Math.max(0, Math.ceil((flowEndsAt - Date.now()) / 1000));
+      setFlowSecondsLeft(remaining);
+      if (remaining <= 0) {
+        setFlowRunning(false);
+        setFlowEndsAt(null);
+        advanceFlow();
+      }
+    };
+    tick();
+    const id = window.setInterval(tick, 250);
     return () => window.clearInterval(id);
-  }, [flowRunning, secondsLeft, currentFlowStep, flowIndex, sessionFlow]);
+  }, [flowRunning, flowEndsAt, currentFlowStep, flowIndex, sessionFlow, soundOn]);
 
-  const openTimer = (label, seconds, locked = true) => { setTimerLabel(label); setSecondsLeft(seconds); setTimerStartValue(seconds); setTimerRunning(false); setTimerLocked(locked); setTimerOpen(true); };
-  const resetFlow = () => { setFlowIndex(0); setFlowRunning(false); if (sessionFlow[0]) { setSecondsLeft(sessionFlow[0].seconds); setTimerStartValue(sessionFlow[0].seconds); } };
-  const startFlowStep = (index = flowIndex) => { const step = sessionFlow[index]; if (!step) return; setFlowIndex(index); setSecondsLeft(step.seconds); setTimerStartValue(step.seconds); setFlowRunning(true); };
-const nextFlowStep = () => {
-  const nextIndex = flowIndex + 1;
+  const openTimer = (label, seconds, locked = true) => {
+    setTimerLabel(label);
+    setTimerSecondsLeft(seconds);
+    setTimerStartValue(seconds);
+    setTimerRunning(false);
+    setTimerEndsAt(null);
+    setTimerLocked(locked);
+    setTimerOpen(true);
+  };
 
-  if (nextIndex >= sessionFlow.length) {
-    completeSession();
-    return;
-  }
+  const startModalTimer = () => {
+    if (timerSecondsLeft <= 0) {
+      setTimerSecondsLeft(timerStartValue);
+    }
+    const remaining = timerSecondsLeft > 0 ? timerSecondsLeft : timerStartValue;
+    setTimerEndsAt(Date.now() + remaining * 1000);
+    setTimerRunning(true);
+  };
 
-  setFlowIndex(nextIndex);
+  const pauseModalTimer = () => {
+    if (timerRunning && timerEndsAt) {
+      const remaining = Math.max(0, Math.ceil((timerEndsAt - Date.now()) / 1000));
+      setTimerSecondsLeft(remaining);
+    }
+    setTimerRunning(false);
+    setTimerEndsAt(null);
+  };
 
-  const step = sessionFlow[nextIndex];
-  if (step) {
-    setSecondsLeft(step.seconds);
-    setTimerStartValue(step.seconds);
-  }
+  const resetFlow = () => {
+    setFlowIndex(0);
+    setFlowRunning(false);
+    setFlowEndsAt(null);
+    const firstStep = sessionFlow[0];
+    setFlowSecondsLeft(firstStep ? firstStep.seconds : 0);
+  };
 
-  setFlowRunning(false);
-};
+  const startFlowStep = (index = flowIndex) => {
+    const step = sessionFlow[index];
+    if (!step) return;
+
+    setFlowIndex(index);
+
+    if (step.kind === "Work Block") {
+      setFlowRunning(false);
+      setFlowEndsAt(null);
+      setFlowSecondsLeft(0);
+      announceFlowStep(step);
+      return;
+    }
+
+    const remaining = index === flowIndex && flowSecondsLeft > 0 ? flowSecondsLeft : step.seconds;
+    setFlowSecondsLeft(remaining);
+    setFlowEndsAt(Date.now() + remaining * 1000);
+    setFlowRunning(true);
+    announceFlowStep(step);
+  };
+
+  const pauseFlow = () => {
+    if (flowRunning && flowEndsAt) {
+      const remaining = Math.max(0, Math.ceil((flowEndsAt - Date.now()) / 1000));
+      setFlowSecondsLeft(remaining);
+    }
+    setFlowRunning(false);
+    setFlowEndsAt(null);
+  };
+
   const toggleItem = (id) => setSelected((prev) => prev.includes(id) ? prev.filter((value) => value !== id) : prev.length >= currentWeek.maxExercises ? prev : [...prev, id]);
-  const smartTemplates = {
- "Footwork + Power": [
-  "shadow-6",
-  "smash-combo",
-  "rear-recovery",
-  "split-step-hops",
-  "lateral-shuffle",
-  "reverse-chase",
-  "mirror",
-  "scissor-kick",
-  "net-kill-shadow",
-  "squats",
-  "lunges",
-  "split-squat",
-  "bulgarian-split",
-  "plyo-jumps",
-  "skater-hop",
-  "lateral-hop",
-  "planks",
-  "plank-shoulder-tap",
-  "single-leg-calf",
-  "mountain-climber"
-],
-  "Leg Day": [
-    "squats",
-    "lunges",
-    "split-squat",
-    "rdl",
-    "glute-bridge",
-    "single-leg-calf",
-    "plyo-jumps",
-    "skater-hop",
-    "planks",
-    "dead-bug",
-    "hollow-hold"
-  ],
-  "Shoulder Safety": [
-    "shadow-6",
-    "net-lunge",
-    "pushups",
-    "rows",
-    "band-shoulders",
-    "band-pullapart",
-    "planks",
-    "dead-bug",
-    "glute-bridge",
-    "hollow-hold"
-  ],
-  "Speed & Reaction": [
-    "split-step-hops",
-    "mirror",
-    "lateral-shuffle",
-    "reverse-chase",
-    "shadow-6",
-    "rear-recovery",
-    "smash-combo",
-    "skater-hop",
-    "mountain-climber",
-    "plyo-jumps"
-  ],
-  "Core & Stability": [
-    "planks",
-    "dead-bug",
-    "hollow-hold",
-    "glute-bridge",
-    "band-shoulders",
-    "band-pullapart",
-    "single-leg-calf",
-    "rows",
-    "pushups"
-  ],
-};
-const addSmartSession = () => {
-  const pool = [...(smartTemplates[goal] || smartTemplates["Footwork + Power"])];
-  const shuffled = pool.sort(() => Math.random() - 0.5);
-  const nextSelection = shuffled.slice(0, currentWeek.maxExercises);
 
-  setSelected(nextSelection);
-  setFlowIndex(0);
-  setFlowRunning(false);
-};
-  
-  const completeSession = () => { const minutes = Math.max(currentWeek.duration, Math.round(totalEstimatedSeconds / 60)); const baseXP = selected.length * 18 + currentWeek.week * 14 + currentWeek.workSetsBonus * 10; const bonus = selected.length >= currentWeek.maxExercises ? 35 : 15; const earned = baseXP + bonus; const today = new Date().toISOString().slice(0, 10); setLogs((prev) => [{ date: today, session: `${goal} • Week ${week}`, minutes, xp: earned }, ...prev].slice(0, 20)); setSessionCompleteOpen(true); };
-  const removeFromSession = (id) => { setSelected((prev) => prev.filter((value) => value !== id)); resetFlow(); };
-  const resetEverything = () => { setWeek(1); setSelected(DEFAULT_SESSION); setGoal("Footwork + Power"); setSearch(""); setLogs(INITIAL_LOGS); setTimerRunning(false); setTimerOpen(false); setSecondsLeft(45); setTimerStartValue(45); setTimerLocked(true); setTimerLabel("Interval Timer"); setFlowIndex(0); setFlowRunning(false); };
+  const smartTemplates = {
+    "Footwork + Power": ["shadow-6", "smash-combo", "rear-recovery", "split-step-hops", "lateral-shuffle", "reverse-chase", "mirror", "scissor-kick", "net-kill-shadow", "squats", "lunges", "split-squat", "bulgarian-split", "plyo-jumps", "skater-hop", "lateral-hop", "planks", "plank-shoulder-tap", "single-leg-calf", "mountain-climber"],
+    "Leg Day": ["squats", "lunges", "split-squat", "rdl", "glute-bridge", "single-leg-calf", "plyo-jumps", "skater-hop", "planks", "dead-bug", "hollow-hold", "bulgarian-split"],
+    "Shoulder Safety": ["shadow-6", "net-lunge", "pushups", "rows", "band-shoulders", "band-pullapart", "planks", "dead-bug", "glute-bridge", "hollow-hold", "plank-shoulder-tap"],
+    "Speed & Reaction": ["split-step-hops", "mirror", "lateral-shuffle", "reverse-chase", "shadow-6", "rear-recovery", "smash-combo", "skater-hop", "mountain-climber", "plyo-jumps", "lateral-hop", "scissor-kick"],
+    "Core & Stability": ["planks", "dead-bug", "hollow-hold", "glute-bridge", "band-shoulders", "band-pullapart", "single-leg-calf", "rows", "pushups", "plank-shoulder-tap"],
+  };
+
+  const addSmartSession = () => {
+    const pool = [...(smartTemplates[goal] || smartTemplates["Footwork + Power"])];
+    const shuffled = pool.sort(() => Math.random() - 0.5);
+    const nextSelection = shuffled.slice(0, currentWeek.maxExercises);
+    setSelected(nextSelection);
+    setFlowRunning(false);
+    setFlowEndsAt(null);
+    setFlowIndex(0);
+  };
+
+  const removeFromSession = (id) => { setSelected((prev) => prev.filter((value) => value !== id)); };
+  const resetEverything = () => {
+    setWeek(1);
+    setSelected(DEFAULT_SESSION);
+    setGoal("Footwork + Power");
+    setSearch("");
+    setLogs(INITIAL_LOGS);
+    setTimerRunning(false);
+    setTimerOpen(false);
+    setTimerEndsAt(null);
+    setTimerSecondsLeft(45);
+    setTimerStartValue(45);
+    setTimerLocked(true);
+    setTimerLabel("Interval Timer");
+    setFlowIndex(0);
+    setFlowRunning(false);
+    setFlowEndsAt(null);
+    setFlowSecondsLeft(0);
+    setSessionCompleteOpen(false);
+  };
+
   const achievements = ACHIEVEMENTS.map((achievement) => ({ ...achievement, unlocked: achievement.check({ logs, weekProgress, week, level }) }));
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-50 max-w-md mx-auto">
       <div className="p-4">
-        <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35 }} className="mb-8 grid gap-5 xl:grid-cols-[1.35fr_0.65fr]">
+        <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35 }} className="mb-8 grid gap-5">
           <Card className="bg-gradient-to-br from-slate-900 via-slate-900 to-slate-800">
             <CardHeader className="pb-4">
               <div className="flex flex-wrap items-center gap-3">
@@ -375,11 +514,11 @@ const addSmartSession = () => {
                 <Badge className="border-emerald-500/40 bg-emerald-500/15 text-emerald-100">{rank}</Badge>
                 <Badge className="border-blue-500/30 bg-blue-500/15 text-blue-100">Level {level}</Badge>
               </div>
-              <CardTitle className="mt-3 text-3xl leading-tight text-white md:text-5xl">Badminton Performance Planner</CardTitle>
+              <CardTitle className="mt-3 text-3xl leading-tight text-white">Badminton Performance Planner</CardTitle>
               <CardDescription className="max-w-2xl text-base leading-relaxed text-slate-200">A structured training system for footwork, power, stability, and weekly progression with session building, guided flow, logging, and performance tracking.</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="grid gap-4 sm:grid-cols-3 xl:grid-cols-3">
+              <div className="grid gap-4 sm:grid-cols-3">
                 <StatCard icon={<Trophy className="h-5 w-5" />} label="Total XP" value={`${totalXP}`} />
                 <StatCard icon={<CalendarDays className="h-5 w-5" />} label="Current Week" value={`Week ${week}`} />
                 <StatCard icon={<Clock3 className="h-5 w-5" />} label="Est. Session" value={`${Math.round(totalEstimatedSeconds / 60)} min`} />
@@ -410,36 +549,41 @@ const addSmartSession = () => {
                 <div className="mb-2 flex items-center justify-between text-sm text-slate-200"><span>Weekly XP Goal</span><span>{weeklyXP}/{currentWeek.xpGoal}</span></div>
                 <Progress value={weekProgress} />
               </div>
-              <div className="grid grid-cols-3 gap-2">
+              <div className="grid grid-cols-2 gap-2">
                 <Button variant="secondary" onClick={() => setWeek((value) => clamp(value - 1, 1, 6))}>Previous</Button>
-                <Button onClick={() => setWeek(1)}>Week 1</Button>
                 <Button variant="secondary" onClick={() => setWeek((value) => clamp(value + 1, 1, 6))}>Next</Button>
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <Button variant="secondary" onClick={() => setSoundOn((value) => !value)}>
+                  {soundOn ? <Volume2 className="h-4 w-4" /> : <VolumeX className="h-4 w-4" />} {soundOn ? "Sound cues on" : "Sound cues off"}
+                </Button>
+                <Button onClick={() => setWeek(1)}>Week 1</Button>
               </div>
             </CardContent>
           </Card>
         </motion.div>
 
         <Tabs defaultValue="build" className="space-y-6">
-  <TabsList className="grid w-full grid-cols-6 rounded-2xl border border-slate-700 bg-slate-900 p-1">
-    <TabsTrigger value="build">Build</TabsTrigger>
-    <TabsTrigger value="session">Session</TabsTrigger>
-    <TabsTrigger value="flow">Guided Flow</TabsTrigger>
-    <TabsTrigger value="plan">Plan</TabsTrigger>
-    <TabsTrigger value="log">Log</TabsTrigger>
-    <TabsTrigger value="progress">Progress</TabsTrigger>
-  </TabsList>
+          <TabsList className="grid w-full grid-cols-6 rounded-2xl border border-slate-700 bg-slate-900 p-1 text-[11px]">
+            <TabsTrigger value="build">Build</TabsTrigger>
+            <TabsTrigger value="session">Session</TabsTrigger>
+            <TabsTrigger value="flow">Flow</TabsTrigger>
+            <TabsTrigger value="plan">Plan</TabsTrigger>
+            <TabsTrigger value="log">Log</TabsTrigger>
+            <TabsTrigger value="progress">Progress</TabsTrigger>
+          </TabsList>
 
           <TabsContent value="build">
             <div className="grid gap-6">
               <Card>
                 <CardHeader>
-                  <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                  <div className="flex flex-col gap-3">
                     <div>
                       <CardTitle className="text-2xl text-white">Exercise Library</CardTitle>
                       <CardDescription className="text-slate-200">Use Smart Build for quick sessions or customize manually within the current week cap.</CardDescription>
                     </div>
-                    <div className="flex flex-col gap-3 md:flex-row md:flex-wrap">
-                      <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search exercises..." className="md:w-56" />
+                    <div className="flex flex-col gap-3">
+                      <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search exercises..." />
                       <Select value={goal} onValueChange={setGoal}>
                         <SelectItem value="Footwork + Power">Footwork + Power</SelectItem>
                         <SelectItem value="Leg Day">Leg Strength</SelectItem>
@@ -494,153 +638,38 @@ const addSmartSession = () => {
               </Card>
             </div>
           </TabsContent>
+
           <TabsContent value="session">
-  <div className="space-y-6">
-    <Card>
-      <CardHeader>
-        <CardTitle className="text-2xl text-white">Session Overview</CardTitle>
-        <CardDescription className="text-slate-200">
-          A cleaner, more professional session view with separate warm-up, work, and cooldown sections.
-        </CardDescription>
-      </CardHeader>
-
-      <CardContent className="space-y-5">
-        <div className="rounded-2xl border border-slate-700 bg-slate-800/80 p-4">
-          <div className="mb-2 flex items-center gap-2 text-slate-50">
-            <Shield className="h-4 w-4" /> Session check
-          </div>
-          <p className={cx(
-            "text-sm leading-relaxed",
-            safetyMessage.includes("good") ? "text-emerald-300" : "text-amber-300"
-          )}>
-            {safetyMessage}
-          </p>
-        </div>
-
-        <SectionCard
-          icon={<Zap className="h-4 w-4" />}
-          title="Warm-Up"
-          subtitle="Preparation sequence"
-        >
-          {WARMUP_STEPS.map((step) => (
-            <TimerRow
-              key={step.id}
-              label={step.label}
-              timeLabel={formatTime(step.seconds)}
-              onStart={() => openTimer(step.label, step.seconds, true)}
-            />
-          ))}
-        </SectionCard>
-
-        <SectionCard
-          icon={<Target className="h-4 w-4" />}
-          title="Main Work"
-          subtitle={`Selected exercises: ${selected.length} / ${currentWeek.maxExercises}`}
-          right={
-            <Badge className="border-emerald-500/30 bg-emerald-500/15 text-emerald-100">
-              {Math.round(
-                chosenItems.reduce(
-                  (sum, item) =>
-                    sum +
-                    Math.round(item.timerSeconds * currentWeek.workTimeScale) *
-                      (item.sets + currentWeek.workSetsBonus),
-                  0
-                ) / 60
-              )}{" "}
-              min
-            </Badge>
-          }
-        >
-          <div className="space-y-2">
-            {chosenItems.map((item) => {
-              const scaledTime = Math.round(
-                item.timerSeconds * currentWeek.workTimeScale
-              );
-
-              return (
-                <div
-                  key={item.id}
-                  className="flex items-center justify-between gap-3 rounded-2xl border border-slate-700 bg-slate-800/80 px-4 py-3"
-                >
-                  <div>
-                    <div className="font-medium text-white">{item.name}</div>
-                    <div className="text-sm text-slate-200">
-                      {displayPrescription(item, currentWeek)}
+            <div className="space-y-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-2xl text-white">Session Overview</CardTitle>
+                  <CardDescription className="text-slate-200">A cleaner, more professional session view with separate warm-up, work, and cooldown sections.</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-5">
+                  <div className="rounded-2xl border border-slate-700 bg-slate-800/80 p-4"><div className="mb-2 flex items-center gap-2 text-slate-50"><Shield className="h-4 w-4" /> Session check</div><p className={cx("text-sm leading-relaxed", safetyMessage.includes("good") ? "text-emerald-300" : "text-amber-300")}>{safetyMessage}</p></div>
+                  <SectionCard icon={<Zap className="h-4 w-4" />} title="Warm-Up" subtitle="Preparation sequence">{WARMUP_STEPS.map((step) => <TimerRow key={step.id} label={step.label} timeLabel={formatTime(step.seconds)} onStart={() => openTimer(step.label, step.seconds, true)} />)}</SectionCard>
+                  <SectionCard icon={<Target className="h-4 w-4" />} title="Main Work" subtitle={`Selected exercises: ${selected.length} / ${currentWeek.maxExercises}`} right={<Badge className="border-emerald-500/30 bg-emerald-500/15 text-emerald-100">{Math.round(chosenItems.reduce((sum, item) => sum + Math.round(item.timerSeconds * currentWeek.workTimeScale) * (item.sets + currentWeek.workSetsBonus), 0) / 60)} min</Badge>}>
+                    <div className="space-y-2">
+                      {chosenItems.map((item) => {
+                        const scaledTime = Math.round(item.timerSeconds * currentWeek.workTimeScale);
+                        return <div key={item.id} className="flex items-center justify-between gap-3 rounded-2xl border border-slate-700 bg-slate-800/80 px-4 py-3"><div><div className="font-medium text-white">{item.name}</div><div className="text-sm text-slate-200">{displayPrescription(item, currentWeek)}</div></div><div className="flex items-center gap-2">{item.mode === "time" ? <Button size="sm" variant="secondary" className="rounded-xl" onClick={() => openTimer(item.name, scaledTime, true)}><Timer className="h-4 w-4" /> {formatTime(scaledTime)}</Button> : <Badge className="border-slate-600 bg-slate-900 text-slate-50">Reps</Badge>}<Button variant="ghost" size="icon" className="rounded-xl" onClick={() => removeFromSession(item.id)}><Trash2 className="h-4 w-4" /></Button></div></div>;
+                      })}
                     </div>
-                  </div>
-
-                  <div className="flex items-center gap-2">
-                    {item.mode === "time" ? (
-                      <Button
-                        size="sm"
-                        variant="secondary"
-                        className="rounded-xl"
-                        onClick={() =>
-                          openTimer(item.name, scaledTime, true)
-                        }
-                      >
-                        <Timer className="h-4 w-4" />{" "}
-                        {formatTime(scaledTime)}
-                      </Button>
-                    ) : (
-                      <Badge className="border-slate-600 bg-slate-900 text-slate-50">
-                        Reps
-                      </Badge>
-                    )}
-
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="rounded-xl"
-                      onClick={() => removeFromSession(item.id)}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </SectionCard>
-
-        <SectionCard
-          icon={<Wind className="h-4 w-4" />}
-          title="Cooldown"
-          subtitle="Recovery sequence"
-        >
-          {COOLDOWN_STEPS.map((step) => (
-            <TimerRow
-              key={step.id}
-              label={step.label}
-              timeLabel={formatTime(step.seconds)}
-              onStart={() => openTimer(step.label, step.seconds, true)}
-            />
-          ))}
-        </SectionCard>
-
-        <div className="grid grid-cols-2 gap-3">
-          <Button
-            variant="secondary"
-            onClick={() => openTimer("Quick Timer", 45, false)}
-          >
-            <Timer className="h-4 w-4" /> Quick Timer
-          </Button>
-
-          <Button onClick={completeSession}>
-            <Plus className="h-4 w-4" /> Complete Session
-          </Button>
-        </div>
-      </CardContent>
-    </Card>
-  </div>
-</TabsContent>
+                  </SectionCard>
+                  <SectionCard icon={<Wind className="h-4 w-4" />} title="Cooldown" subtitle="Recovery sequence">{COOLDOWN_STEPS.map((step) => <TimerRow key={step.id} label={step.label} timeLabel={formatTime(step.seconds)} onStart={() => openTimer(step.label, step.seconds, true)} />)}</SectionCard>
+                  <div className="grid grid-cols-2 gap-3"><Button variant="secondary" onClick={() => openTimer("Quick Timer", 45, false)}><Timer className="h-4 w-4" /> Quick Timer</Button><Button onClick={() => completeSession({ keepFlowPosition: true })}><Plus className="h-4 w-4" /> Complete Session</Button></div>
+                </CardContent>
+              </Card>
+            </div>
+          </TabsContent>
 
           <TabsContent value="flow">
-            <div className="grid gap-6 xl:grid-cols-[0.78fr_1.22fr]">
+            <div className="grid gap-6">
               <Card>
                 <CardHeader>
                   <CardTitle className="text-2xl text-white">Guided Workout Flow</CardTitle>
-                  <CardDescription className="text-slate-200">A cleaner follow-along view with built-in rest blocks and automatic step progression.</CardDescription>
+                  <CardDescription className="text-slate-200">Built to stop accidental skipping, keep reps as reps, and show real drill instructions.</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-5">
                   <div><div className="mb-2 flex items-center justify-between text-sm text-slate-200"><span>Session Progress</span><span>{Math.min(flowIndex + 1, sessionFlow.length)}/{sessionFlow.length || 0}</span></div><Progress value={flowProgress} /></div>
@@ -648,36 +677,56 @@ const addSmartSession = () => {
                     <motion.div key={currentFlowStep?.id || "empty"} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.2 }} className="rounded-3xl border border-slate-700 bg-slate-800/80 p-5">
                       <div className="text-sm text-slate-200">Current Step</div>
                       <div className="mt-1 text-2xl font-bold text-white">{currentFlowStep ? currentFlowStep.label : "No session steps loaded"}</div>
-                      {currentFlowStep && <div className="mt-3 flex flex-wrap gap-2"><Badge className={cx(currentFlowStep.kind === "Rest" ? "border-blue-500/30 bg-blue-500/15 text-blue-100" : "border-slate-600 bg-slate-900 text-slate-50")}>{currentFlowStep.kind}</Badge><Badge className="border-slate-600 bg-slate-900 text-slate-50">{currentFlowStep.kind === "Work Block" ? currentFlowStep.prescription : formatTime(currentFlowStep.seconds)}</Badge></div>}
+                      {currentFlowStep && <div className="mt-3 flex flex-wrap gap-2"><Badge className={cx(currentFlowStep.kind === "Rest" ? "border-blue-500/30 bg-blue-500/15 text-blue-100" : "border-slate-600 bg-slate-900 text-slate-50")}>{currentFlowStep.kind}</Badge><Badge className="border-slate-600 bg-slate-900 text-slate-50">{currentFlowStep.kind === "Work Block" ? currentFlowStep.prescription : formatTime(flowSecondsLeft)}</Badge></div>}
                       <div className="mt-4 rounded-3xl border border-slate-700 bg-slate-950 p-6 text-center">
-  {currentFlowStep?.kind === "Work Block" ? (
-    <div className="space-y-4">
-      <div className="text-3xl font-bold text-white">{currentFlowStep.prescription}</div>
-      <Button onClick={() => {
-  setFlowRunning(false);
-  nextFlowStep();
-}}>
-  Complete Set
-</Button>
-    </div>
-  ) : (
-    <div className="text-6xl font-bold text-white">{formatTime(secondsLeft)}</div>
-  )}
-</div>
+                        {currentFlowStep?.kind === "Work Block" ? (
+                          <div className="space-y-4">
+                            <div className="text-3xl font-bold text-white">{currentFlowStep.prescription}</div>
+                            {currentFlowDrill && (
+                              <div className="rounded-2xl border border-slate-800 bg-slate-900/80 p-4 text-left">
+                                <div className="text-sm font-medium text-emerald-300">How to do it</div>
+                                <div className="mt-1 text-sm text-slate-200">{currentFlowDrill.desc}</div>
+                                <div className="mt-3 flex flex-wrap gap-2">{currentFlowDrill.cues.map((cue) => <span key={cue} className="rounded-full border border-slate-700 bg-slate-950 px-3 py-1 text-xs text-slate-100">{cue}</span>)}</div>
+                              </div>
+                            )}
+                            <Button onClick={() => { pauseFlow(); advanceFlow(); }}>Complete Set</Button>
+                          </div>
+                        ) : (
+                          <div className="text-6xl font-bold text-white">{formatTime(flowSecondsLeft)}</div>
+                        )}
+                      </div>
                     </motion.div>
                   </AnimatePresence>
-                  <div className="rounded-3xl border border-slate-700 bg-slate-800/60 p-4"><div className="text-sm text-slate-200">Up Next</div><div className="mt-1 text-lg font-semibold text-white">{nextFlowStepData ? nextFlowStepData.label : "Session complete"}</div><div className="mt-1 text-sm text-slate-300">{nextFlowStepData ? nextFlowStepData.kind : "Nice. You cooked."}</div></div>
-                  <div className="grid grid-cols-4 gap-3"><Button onClick={() => startFlowStep(flowIndex)}><PlayCircle className="h-4 w-4" /> Start</Button><Button variant="secondary" onClick={() => setFlowRunning(false)}><PauseCircle className="h-4 w-4" /> Pause</Button><Button variant="secondary" onClick={nextFlowStep}><SkipForward className="h-4 w-4" /> Skip</Button><Button variant="secondary" onClick={resetFlow}><RefreshCw className="h-4 w-4" /> Reset</Button></div>
+
+                  <div className="rounded-3xl border border-slate-700 bg-slate-800/60 p-4">
+                    <div className="text-sm text-slate-200">Up Next</div>
+                    <div className="mt-1 text-lg font-semibold text-white">{nextFlowStepData ? nextFlowStepData.label : "Session complete"}</div>
+                    <div className="mt-1 text-sm text-slate-300">{nextFlowStepData ? nextFlowStepData.kind : "Nice. You cooked."}</div>
+                    {nextFlowDrill && (
+                      <div className="mt-3 rounded-2xl border border-slate-700 bg-slate-900/70 p-3">
+                        <div className="text-xs font-medium uppercase tracking-wide text-slate-400">Next drill tips</div>
+                        <div className="mt-1 text-sm text-slate-200">{nextFlowDrill.desc}</div>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="grid grid-cols-4 gap-3">
+                    <Button onClick={() => startFlowStep(flowIndex)}>{flowRunning ? <PlayCircle className="h-4 w-4" /> : <PlayCircle className="h-4 w-4" />} {flowRunning ? "Resume" : "Start"}</Button>
+                    <Button variant="secondary" onClick={pauseFlow}><PauseCircle className="h-4 w-4" /> Pause</Button>
+                    <Button variant="secondary" onClick={advanceFlow}><SkipForward className="h-4 w-4" /> Skip</Button>
+                    <Button variant="secondary" onClick={resetFlow}><RefreshCw className="h-4 w-4" /> Reset</Button>
+                  </div>
                 </CardContent>
               </Card>
+
               <Card>
                 <CardHeader>
                   <CardTitle className="text-2xl text-white">Session Queue</CardTitle>
                   <CardDescription className="text-slate-200">Includes warm-up, main work, rest intervals, exercise transitions, and cooldown.</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <div className="space-y-2 max-h-[720px] overflow-y-auto pr-1">
-                    {sessionFlow.map((step, index) => <button key={step.id} onClick={() => { setFlowIndex(index); setSecondsLeft(step.seconds); setTimerStartValue(step.seconds); setFlowRunning(false); }} className={cx("w-full rounded-2xl border px-4 py-3 text-left transition", index === flowIndex ? "border-emerald-500 bg-emerald-500/10" : step.kind === "Rest" ? "border-blue-500/20 bg-blue-500/5 hover:bg-blue-500/10" : "border-slate-700 bg-slate-800/80 hover:bg-slate-800")}><div className="flex items-center justify-between gap-3"><div><div className="font-medium text-white">{step.label}</div><div className="text-sm text-slate-200">{step.kind}</div></div><div className="flex items-center gap-2"><Badge className={cx(step.kind === "Rest" ? "border-blue-500/30 bg-blue-500/15 text-blue-100" : "border-slate-600 bg-slate-900 text-slate-50")}>{step.kind === "Work Block" ? step.prescription : formatTime(step.seconds)}</Badge>{index === flowIndex && <ChevronRight className="h-4 w-4 text-emerald-300" />}</div></div></button>)}
+                  <div className="space-y-2 max-h-[520px] overflow-y-auto pr-1">
+                    {sessionFlow.map((step, index) => <button key={step.id} onClick={() => { setFlowIndex(index); setFlowSecondsLeft(step.seconds); setFlowEndsAt(null); setFlowRunning(false); }} className={cx("w-full rounded-2xl border px-4 py-3 text-left transition", index === flowIndex ? "border-emerald-500 bg-emerald-500/10" : step.kind === "Rest" ? "border-blue-500/20 bg-blue-500/5 hover:bg-blue-500/10" : "border-slate-700 bg-slate-800/80 hover:bg-slate-800")}><div className="flex items-center justify-between gap-3"><div><div className="font-medium text-white">{step.label}</div><div className="text-sm text-slate-200">{step.kind}</div></div><div className="flex items-center gap-2"><Badge className={cx(step.kind === "Rest" ? "border-blue-500/30 bg-blue-500/15 text-blue-100" : "border-slate-600 bg-slate-900 text-slate-50")}>{step.kind === "Work Block" ? step.prescription : formatTime(step.seconds)}</Badge>{index === flowIndex && <ChevronRight className="h-4 w-4 text-emerald-300" />}</div></div></button>)}
                   </div>
                 </CardContent>
               </Card>
@@ -685,142 +734,60 @@ const addSmartSession = () => {
           </TabsContent>
 
           <TabsContent value="plan">
-            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+            <div className="grid gap-4">
               {WEEK_PLAN.map((item) => <Card key={item.week} className={cx(week === item.week && "border-emerald-500 bg-emerald-500/10")}><CardHeader><CardTitle className="flex items-center justify-between text-xl text-white"><span>Week {item.week}</span><Badge className="border-slate-600 bg-slate-800 text-slate-50">{item.duration} min</Badge></CardTitle><CardDescription className="text-slate-200">{item.title}</CardDescription></CardHeader><CardContent><p className="mb-4 text-sm leading-relaxed text-slate-200">{item.focus}</p><div className="space-y-2 text-sm text-slate-300"><div>XP Goal: {item.xpGoal}</div><div>Exercise Max: {item.maxExercises}</div><div>Extra Set Scaling: +{item.workSetsBonus}</div></div><Button className="mt-4 w-full" variant="secondary" onClick={() => setWeek(item.week)}>Select Week</Button></CardContent></Card>)}
             </div>
           </TabsContent>
 
           <TabsContent value="log">
-            <div className="grid gap-6 xl:grid-cols-[0.8fr_1.2fr]">
+            <div className="grid gap-6">
               <Card><CardHeader><CardTitle className="text-2xl text-white">Training Summary</CardTitle><CardDescription className="text-slate-200">Session history, current status, and reset controls.</CardDescription></CardHeader><CardContent className="space-y-4"><StatRow icon={<Footprints className="h-4 w-4" />} label="Sessions Logged" value={`${logs.length}`} /><StatRow icon={<Medal className="h-4 w-4" />} label="Current Rank" value={rank} /><StatRow icon={<Dumbbell className="h-4 w-4" />} label="Current Level" value={`${level}`} /><StatRow icon={<Timer className="h-4 w-4" />} label="Avg Session" value={`${Math.round(logs.reduce((sum, entry) => sum + entry.minutes, 0) / Math.max(logs.length, 1))} min`} /><Button className="w-full border border-red-500/30 bg-red-500/15 text-red-100 hover:bg-red-500/25" onClick={resetEverything}><RotateCcw className="h-4 w-4" /> Full Reset</Button></CardContent></Card>
-              <Card><CardHeader><CardTitle className="text-2xl text-white">Workout Log</CardTitle><CardDescription className="text-slate-200">Completed sessions with time and earned XP.</CardDescription></CardHeader><CardContent><div className="space-y-3">{logs.length === 0 ? <div className="rounded-2xl border border-dashed border-slate-700 bg-slate-800/40 p-6 text-center text-slate-300">No workouts logged yet.</div> : logs.map((log, idx) => <div key={`${log.date}-${idx}`} className="flex flex-col justify-between gap-3 rounded-2xl border border-slate-700 bg-slate-800/80 p-4 md:flex-row md:items-center"><div><div className="font-medium text-white">{log.session}</div><div className="text-sm text-slate-200">{log.date}</div></div><div className="flex gap-2"><Badge className="border-slate-600 bg-slate-900 text-slate-50">{log.minutes} min</Badge><Badge className="border-emerald-500/30 bg-emerald-500/15 text-emerald-100">+{log.xp} XP</Badge></div></div>)}</div></CardContent></Card>
+              <Card><CardHeader><CardTitle className="text-2xl text-white">Workout Log</CardTitle><CardDescription className="text-slate-200">Completed sessions with time and earned XP.</CardDescription></CardHeader><CardContent><div className="space-y-3">{logs.length === 0 ? <div className="rounded-2xl border border-dashed border-slate-700 bg-slate-800/40 p-6 text-center text-slate-300">No workouts logged yet.</div> : logs.map((log, idx) => <div key={`${log.date}-${idx}`} className="flex flex-col justify-between gap-3 rounded-2xl border border-slate-700 bg-slate-800/80 p-4"><div><div className="font-medium text-white">{log.session}</div><div className="text-sm text-slate-200">{log.date}</div></div><div className="flex gap-2"><Badge className="border-slate-600 bg-slate-900 text-slate-50">{log.minutes} min</Badge><Badge className="border-emerald-500/30 bg-emerald-500/15 text-emerald-100">+{log.xp} XP</Badge></div></div>)}</div></CardContent></Card>
             </div>
           </TabsContent>
 
           <TabsContent value="progress">
-            <div className="grid gap-6 lg:grid-cols-2">
-              <Card><CardHeader><CardTitle className="text-2xl text-white">Performance Progress</CardTitle><CardDescription className="text-slate-200">Clean rank progression, level tracking, and weekly targets.</CardDescription></CardHeader><CardContent className="space-y-5"><div className="rounded-3xl border border-slate-700 bg-slate-800/80 p-5"><div className="text-sm text-slate-200">Current Rank</div><div className="mt-1 text-3xl font-bold text-white">{rank}</div><div className="mt-4 text-sm text-slate-200">Level</div><div className="mt-1 text-xl font-semibold text-blue-100">{level}</div><div className="mt-3 text-sm text-slate-100">{totalXP} XP total</div></div><div><div className="mb-2 flex items-center justify-between text-sm text-slate-200"><span>Next Level</span><span>{level >= MAX_LEVEL ? "MAX" : `${xpNeeded} XP remaining`}</span></div><Progress value={xpBar} /></div><div><div className="mb-2 flex items-center justify-between text-sm text-slate-200"><span>Weekly Target</span><span>{weeklyXP}/{currentWeek.xpGoal}</span></div><Progress value={weekProgress} /></div></CardContent></Card>
+            <div className="grid gap-6">
+              <Card><CardHeader><CardTitle className="text-2xl text-white">Performance Progress</CardTitle><CardDescription className="text-slate-200">Cleaner rank progression, better level feedback, and clearer goals.</CardDescription></CardHeader><CardContent className="space-y-5"><div className="rounded-3xl border border-emerald-500/20 bg-gradient-to-br from-emerald-500/10 to-blue-500/10 p-5"><div className="text-sm text-slate-200">Current Title</div><div className="mt-1 text-3xl font-bold text-white">{rank}</div><div className="mt-4 text-sm text-slate-200">Level</div><div className="mt-1 text-2xl font-semibold text-blue-100">{level}</div><div className="mt-3 text-sm text-slate-100">{totalXP} XP total</div></div><div><div className="mb-2 flex items-center justify-between text-sm text-slate-200"><span>Next Level</span><span>{level >= MAX_LEVEL ? "MAX" : `${xpNeeded} XP remaining`}</span></div><Progress value={xpBar} /></div><div><div className="mb-2 flex items-center justify-between text-sm text-slate-200"><span>Weekly Target</span><span>{weeklyXP}/{currentWeek.xpGoal}</span></div><Progress value={weekProgress} /></div></CardContent></Card>
               <Card><CardHeader><CardTitle className="text-2xl text-white">Achievements</CardTitle><CardDescription className="text-slate-200">A professional achievement system tied to real progress.</CardDescription></CardHeader><CardContent className="grid gap-3">{achievements.map((achievement) => <div key={achievement.name} className={cx("rounded-2xl border p-4", achievement.unlocked ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-100" : "border-slate-700 bg-slate-800/80 text-slate-200")}><div className="flex items-center gap-2 font-medium text-white"><CheckCircle2 className="h-4 w-4" /> {achievement.name}</div><div className="mt-1 text-sm">{achievement.description}</div><div className="mt-2 text-xs uppercase tracking-wide">{achievement.unlocked ? "Unlocked" : "Locked"}</div></div>)}</CardContent></Card>
             </div>
           </TabsContent>
         </Tabs>
 
-        
         <Dialog open={timerOpen} onOpenChange={setTimerOpen}>
-  <DialogContent>
-    <DialogHeader>
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <DialogTitle>{timerLabel}</DialogTitle>
-          <DialogDescription>
-            {timerLocked
-              ? "Locked to the selected exercise or session step."
-              : "Custom timer mode."}
-          </DialogDescription>
-        </div>
-        <button
-          className="rounded-xl p-2 text-slate-400 hover:bg-slate-800 hover:text-white"
-          onClick={() => setTimerOpen(false)}
-        >
-          <X className="h-4 w-4" />
-        </button>
-      </div>
-    </DialogHeader>
+          <DialogContent>
+            <DialogHeader>
+              <div className="flex items-start justify-between gap-4"><div><DialogTitle>{timerLabel}</DialogTitle><DialogDescription>{timerLocked ? "Locked to the selected exercise or session step." : "Custom timer mode."}</DialogDescription></div><button className="rounded-xl p-2 text-slate-400 hover:bg-slate-800 hover:text-white" onClick={() => setTimerOpen(false)}><X className="h-4 w-4" /></button></div>
+            </DialogHeader>
+            <div className="space-y-6 p-6">
+              <div className="rounded-3xl border border-slate-700 bg-slate-900 p-6 text-center text-6xl font-bold tracking-tight text-white">{formatTime(timerSecondsLeft)}</div>
+              {!timerLocked && <div className="grid grid-cols-3 gap-3"><Button variant="secondary" onClick={() => { setTimerSecondsLeft(30); setTimerStartValue(30); setTimerRunning(false); setTimerEndsAt(null); }}>30s</Button><Button variant="secondary" onClick={() => { setTimerSecondsLeft(45); setTimerStartValue(45); setTimerRunning(false); setTimerEndsAt(null); }}>45s</Button><Button variant="secondary" onClick={() => { setTimerSecondsLeft(60); setTimerStartValue(60); setTimerRunning(false); setTimerEndsAt(null); }}>60s</Button></div>}
+              <div className="grid grid-cols-3 gap-3"><Button onClick={startModalTimer}>Start</Button><Button variant="secondary" onClick={pauseModalTimer}>Pause</Button><Button variant="secondary" onClick={() => { setTimerRunning(false); setTimerEndsAt(null); setTimerSecondsLeft(timerStartValue); }}>Reset</Button></div>
+            </div>
+          </DialogContent>
+        </Dialog>
 
-    <div className="space-y-6 p-6">
-      <div className="rounded-3xl border border-slate-700 bg-slate-900 p-6 text-center text-6xl font-bold tracking-tight text-white">
-        {formatTime(secondsLeft)}
-      </div>
-
-      {!timerLocked && (
-        <div className="grid grid-cols-3 gap-3">
-          <Button
-            variant="secondary"
-            onClick={() => {
-              setSecondsLeft(30);
-              setTimerStartValue(30);
-              setTimerRunning(false);
-            }}
-          >
-            30s
-          </Button>
-          <Button
-            variant="secondary"
-            onClick={() => {
-              setSecondsLeft(45);
-              setTimerStartValue(45);
-              setTimerRunning(false);
-            }}
-          >
-            45s
-          </Button>
-          <Button
-            variant="secondary"
-            onClick={() => {
-              setSecondsLeft(60);
-              setTimerStartValue(60);
-              setTimerRunning(false);
-            }}
-          >
-            60s
-          </Button>
-        </div>
-      )}
-
-      <div className="grid grid-cols-3 gap-3">
-        <Button onClick={() => setTimerRunning(true)}>Start</Button>
-        <Button variant="secondary" onClick={() => setTimerRunning(false)}>
-          Pause
-        </Button>
-        <Button
-          variant="secondary"
-          onClick={() => {
-            setTimerRunning(false);
-            setSecondsLeft(timerStartValue);
-          }}
-        >
-          Reset
-        </Button>
-      </div>
-    </div>
-  </DialogContent>
-</Dialog>
-
-<Dialog open={sessionCompleteOpen} onOpenChange={setSessionCompleteOpen}>
-  <DialogContent>
-    <DialogHeader>
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <DialogTitle>Session Complete 🎉</DialogTitle>
-          <DialogDescription>
-            Nice work. Your workout has been logged and your progress was saved.
-          </DialogDescription>
-        </div>
-        <button
-          className="rounded-xl p-2 text-slate-400 hover:bg-slate-800 hover:text-white"
-          onClick={() => setSessionCompleteOpen(false)}
-        >
-          <X className="h-4 w-4" />
-        </button>
-      </div>
-    </DialogHeader>
-
-    <div className="space-y-4 p-6">
-      <div className="rounded-3xl border border-emerald-500/30 bg-emerald-500/10 p-5 text-center">
-        <div className="text-lg font-semibold text-white">
-          Workout logged successfully
-        </div>
-        <div className="mt-2 text-sm text-slate-300">
-          Keep stacking sessions and your level will keep climbing.
-        </div>
-      </div>
-
-      <Button className="w-full" onClick={() => setSessionCompleteOpen(false)}>
-        Nice
-      </Button>
-    </div>
-  </DialogContent>
-</Dialog>
+        <Dialog open={sessionCompleteOpen} onOpenChange={setSessionCompleteOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <DialogTitle>Session Complete 🎉</DialogTitle>
+                  <DialogDescription>Nice work. Your workout has been logged and your progress was saved.</DialogDescription>
+                </div>
+                <button className="rounded-xl p-2 text-slate-400 hover:bg-slate-800 hover:text-white" onClick={() => setSessionCompleteOpen(false)}><X className="h-4 w-4" /></button>
+              </div>
+            </DialogHeader>
+            <div className="space-y-4 p-6">
+              <div className="rounded-3xl border border-emerald-500/30 bg-emerald-500/10 p-5 text-center">
+                <div className="text-lg font-semibold text-white">Workout logged successfully</div>
+                <div className="mt-2 text-sm text-slate-300">+{sessionCompleteMeta.xp} XP • {sessionCompleteMeta.minutes} min</div>
+                <div className="mt-3 inline-flex rounded-full border border-blue-500/30 bg-blue-500/15 px-3 py-1 text-sm text-blue-100">Level {sessionCompleteMeta.level} • {sessionCompleteMeta.rank}</div>
+              </div>
+              <Button className="w-full" onClick={() => setSessionCompleteOpen(false)}>Nice</Button>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   );
