@@ -395,32 +395,34 @@ export default function BadmintonTrainingApp() {
   }, [flowRunning, flowEndsAt, currentFlowStep, flowIndex, sessionFlow, soundOn]);
 
   const openTimer = (label, seconds, locked = true) => {
-    setTimerLabel(label);
+  setTimerLabel(label);
+  setTimerLocked(locked);
+
+  if (!timerOpen) {
     setTimerSecondsLeft(seconds);
     setTimerStartValue(seconds);
     setTimerRunning(false);
     setTimerEndsAt(null);
-    setTimerLocked(locked);
-    setTimerOpen(true);
-  };
+  }
+
+  setTimerOpen(true);
+};
 
   const startModalTimer = () => {
-  const remaining =
-    timerSecondsLeft > 0 ? timerSecondsLeft : timerStartValue;
-
-  setTimerSecondsLeft(remaining); // sync it properly
+  const remaining = timerSecondsLeft > 0 ? timerSecondsLeft : timerStartValue;
+  setTimerSecondsLeft(remaining);
   setTimerEndsAt(Date.now() + remaining * 1000);
   setTimerRunning(true);
 };
   
   const pauseModalTimer = () => {
-    if (timerRunning && timerEndsAt) {
-      const remaining = Math.max(1, Math.ceil((timerEndsAt - Date.now()) / 1000));
-      setTimerSecondsLeft(remaining);
-    }
-    setTimerRunning(false);
-    setTimerEndsAt(null);
-  };
+  if (timerEndsAt) {
+    const remaining = Math.max(1, Math.ceil((timerEndsAt - Date.now()) / 1000));
+    setTimerSecondsLeft(remaining);
+  }
+  setTimerRunning(false);
+  setTimerEndsAt(null);
+};
 
   const resetFlow = () => {
     setFlowIndex(0);
