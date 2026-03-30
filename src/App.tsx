@@ -319,20 +319,25 @@ export default function BadmintonTrainingApp() {
   }, [sessionFlow, flowRunning]);
 
   useEffect(() => {
-    if (!timerRunning || !timerEndsAt) return;
-    const tick = () => {
-      const remaining = Math.max(0, Math.ceil((timerEndsAt - Date.now()) / 1000));
-      setTimerSecondsLeft(remaining);
-      if (remaining <= 0) {
-        setTimerRunning(false);
-        setTimerEndsAt(null);
-        if (soundOn) playCue("done");
-      }
-    };
-    tick();
-    const id = window.setInterval(tick, 250);
-    return () => window.clearInterval(id);
-  }, [timerRunning, timerEndsAt, soundOn]);
+  if (!timerRunning || !timerEndsAt) return;
+
+  const id = window.setInterval(() => {
+    const msLeft = timerEndsAt - Date.now();
+
+    if (msLeft <= 0) {
+      setTimerRunning(false);
+      setTimerEndsAt(null);
+      setTimerSecondsLeft(0);
+      if (soundOn) playCue("done");
+      return;
+    }
+
+    const remaining = Math.ceil(msLeft / 1000);
+    setTimerSecondsLeft(remaining);
+  }, 250);
+
+  return () => window.clearInterval(id);
+}, [timerRunning, timerEndsAt, soundOn]);
 
   const completeSession = (options = {}) => {
     const minutes = Math.max(currentWeek.duration, Math.round(totalEstimatedSeconds / 60));
@@ -416,12 +421,12 @@ export default function BadmintonTrainingApp() {
 };
   
   const pauseModalTimer = () => {
-  if (timerEndsAt) {
-    const remaining = Math.max(1, Math.ceil((timerEndsAt - Date.now()) / 1000));
-    setTimerSecondsLeft(remaining);
-  }
+  if (!timerEndsAt) return;
+
+  const remaining = Math.max(1, Math.ceil((timerEndsAt - Date.now()) / 1000));
   setTimerRunning(false);
   setTimerEndsAt(null);
+  setTimerSecondsLeft(remaining);
 };
 
   const resetFlow = () => {
