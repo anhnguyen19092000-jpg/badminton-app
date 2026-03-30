@@ -263,6 +263,7 @@ export default function BadmintonTrainingApp() {
   const [timerRunning, setTimerRunning] = useState(false);
   const [timerLocked, setTimerLocked] = useState(true);
   const [timerEndsAt, setTimerEndsAt] = useState(null);
+  const [pausedTimerSeconds, setPausedTimerSeconds] = useState(null);
 
   const [logs, setLogs] = useState(() => {
     const saved = localStorage.getItem("badminton_logs");
@@ -414,7 +415,14 @@ export default function BadmintonTrainingApp() {
 };
 
   const startModalTimer = () => {
-  const remaining = timerSecondsLeft > 0 ? timerSecondsLeft : timerStartValue;
+  const remaining =
+    pausedTimerSeconds !== null
+      ? pausedTimerSeconds
+      : timerSecondsLeft > 0
+      ? timerSecondsLeft
+      : timerStartValue;
+
+  setPausedTimerSeconds(null);
   setTimerSecondsLeft(remaining);
   setTimerEndsAt(Date.now() + remaining * 1000);
   setTimerRunning(true);
@@ -424,9 +432,11 @@ export default function BadmintonTrainingApp() {
   if (!timerEndsAt) return;
 
   const remaining = Math.max(1, Math.ceil((timerEndsAt - Date.now()) / 1000));
+
   setTimerRunning(false);
   setTimerEndsAt(null);
   setTimerSecondsLeft(remaining);
+  setPausedTimerSeconds(remaining); // 👈 THIS is the key line
 };
 
   const resetFlow = () => {
@@ -761,18 +771,95 @@ export default function BadmintonTrainingApp() {
           </TabsContent>
         </Tabs>
 
-        <Dialog open={timerOpen} onOpenChange={setTimerOpen}>
-          <DialogContent>
-            <DialogHeader>
-              <div className="flex items-start justify-between gap-4"><div><DialogTitle>{timerLabel}</DialogTitle><DialogDescription>{timerLocked ? "Locked to the selected exercise or session step." : "Custom timer mode."}</DialogDescription></div><button className="rounded-xl p-2 text-slate-400 hover:bg-slate-800 hover:text-white" onClick={() => setTimerOpen(false)}><X className="h-4 w-4" /></button></div>
-            </DialogHeader>
-            <div className="space-y-6 p-6">
-              <div className="rounded-3xl border border-slate-700 bg-slate-900 p-6 text-center text-6xl font-bold tracking-tight text-white">{formatTime(timerSecondsLeft)}</div>
-              {!timerLocked && <div className="grid grid-cols-3 gap-3"><Button variant="secondary" onClick={() => { setTimerSecondsLeft(30); setTimerStartValue(30); setTimerRunning(false); setTimerEndsAt(null); }}>30s</Button><Button variant="secondary" onClick={() => { setTimerSecondsLeft(45); setTimerStartValue(45); setTimerRunning(false); setTimerEndsAt(null); }}>45s</Button><Button variant="secondary" onClick={() => { setTimerSecondsLeft(60); setTimerStartValue(60); setTimerRunning(false); setTimerEndsAt(null); }}>60s</Button></div>}
-              <div className="grid grid-cols-3 gap-3"><Button onClick={startModalTimer}>Start</Button><Button variant="secondary" onClick={pauseModalTimer}>Pause</Button><Button variant="secondary" onClick={() => { setTimerRunning(false); setTimerEndsAt(null); setTimerSecondsLeft(timerStartValue); }}>Reset</Button></div>
-            </div>
-          </DialogContent>
-        </Dialog>
+<Dialog open={timerOpen} onOpenChange={setTimerOpen}>
+  <DialogContent>
+    <DialogHeader>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <DialogTitle>{timerLabel}</DialogTitle>
+          <DialogDescription>
+            {timerLocked ? "Locked to the selected exercise or session step." : "Custom timer mode."}
+          </DialogDescription>
+        </div>
+        <button
+          className="rounded-xl p-2 text-slate-400 hover:bg-slate-800 hover:text-white"
+          onClick={() => setTimerOpen(false)}
+        >
+          <X className="h-4 w-4" />
+        </button>
+      </div>
+    </DialogHeader>
+
+    <div className="space-y-6 p-6">
+      <div className="rounded-3xl border border-slate-700 bg-slate-900 p-6 text-center text-6xl font-bold tracking-tight text-white">
+        {formatTime(timerSecondsLeft)}
+      </div>
+
+      {!timerLocked && (
+        <div className="grid grid-cols-3 gap-3">
+          <Button
+            variant="secondary"
+            onClick={() => {
+              setTimerSecondsLeft(30);
+              setTimerStartValue(30);
+              setPausedTimerSeconds(null);
+              setTimerRunning(false);
+              setTimerEndsAt(null);
+            }}
+          >
+            30s
+          </Button>
+
+          <Button
+            variant="secondary"
+            onClick={() => {
+              setTimerSecondsLeft(45);
+              setTimerStartValue(45);
+              setPausedTimerSeconds(null);
+              setTimerRunning(false);
+              setTimerEndsAt(null);
+            }}
+          >
+            45s
+          </Button>
+
+          <Button
+            variant="secondary"
+            onClick={() => {
+              setTimerSecondsLeft(60);
+              setTimerStartValue(60);
+              setPausedTimerSeconds(null);
+              setTimerRunning(false);
+              setTimerEndsAt(null);
+            }}
+          >
+            60s
+          </Button>
+        </div>
+      )}
+
+      <div className="grid grid-cols-3 gap-3">
+        <Button onClick={startModalTimer}>Start</Button>
+
+        <Button variant="secondary" onClick={pauseModalTimer}>
+          Pause
+        </Button>
+
+        <Button
+          variant="secondary"
+          onClick={() => {
+            setTimerRunning(false);
+            setTimerEndsAt(null);
+            setPausedTimerSeconds(null);
+            setTimerSecondsLeft(timerStartValue);
+          }}
+        >
+          Reset
+        </Button>
+      </div>
+    </div>
+  </DialogContent>
+</Dialog>
 
         <Dialog open={sessionCompleteOpen} onOpenChange={setSessionCompleteOpen}>
           <DialogContent>
